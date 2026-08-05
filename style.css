@@ -1,1 +1,47 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
 
+body {
+  background: #050505;
+  color: white;
+}
+
+header {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #050505, #151515);
+}
+
+.hero h1 {
+  font-size: 55px;
+  color: #00eaff;
+  text-shadow: 0 0 20px #00eaff;
+}
+
+.hero p {
+  font-size: 22px;
+  margin: 20px 0;
+  color: #ddd;
+}
+
+.btn {
+  display: inline-block;
+  padding: 14px 35px;
+  background: #00eaff;
+  color: black;
+  text-decoration: none;
+  border-radius: 30px;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.btn:hover {
+  transform: scale(1.1
