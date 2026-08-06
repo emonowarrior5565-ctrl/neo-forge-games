@@ -388,3 +388,18 @@ footer {
     justify-content: center;
   }
 }
+
+.search-box {
+  text-align: center;
+  margin: 25px auto;
+}
+
+.search-box input {
+  width: 80%;
+  max-width: 500px;
+  padding: 15px 20px;
+  border-radius: 30px;
+  border: 2px solid #333;
+  outline: none;
+  font-size: 16px;
+}
