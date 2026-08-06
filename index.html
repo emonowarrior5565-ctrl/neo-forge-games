@@ -10,10 +10,6 @@
 <body>
 
   <header>
-    <div class="search-box">
-  <input type="text" placeholder="Search games...">
-  <button>🔍</button>
-</div>
     <div class="container">
       <a href="index.html" class="logo">
         <span class="logo-icon">◆</span> Neo Forge Games
@@ -28,14 +24,19 @@
     </div>
   </header>
 
-  
-    </div>
-  </section>
-
   <section class="section">
     <div class="container">
-      <h2 class="section-title">Featured Free Games</h2>
-      <div class="games-grid">
+      
+      <div class="section-header">
+        <h2 class="section-title">Featured Free Games</h2>
+        <div class="search-box">
+          <input type="text" id="game-search" placeholder="Search games...">
+          <button type="button">🔍</button>
+        </div>
+      </div>
+
+      <div class="games-grid" id="games-container">
+        
         <div class="game-card">
           <div class="game-img">
             <img src="https://via.placeholder.com/400x225/1a160f/ffd60a?text=Pixel+Runner" alt="Pixel Runner">
@@ -47,6 +48,7 @@
             <a href="games.html" class="btn btn-small">Play Now</a>
           </div>
         </div>
+
         <div class="game-card">
           <div class="game-img">
             <img src="https://via.placeholder.com/400x225/1a160f/ffd60a?text=Space+Drift" alt="Space Drift">
@@ -58,6 +60,7 @@
             <a href="games.html" class="btn btn-small">Play Now</a>
           </div>
         </div>
+
         <div class="game-card">
           <div class="game-img">
             <img src="https://via.placeholder.com/400x225/1a160f/ffd60a?text=Block+Puzzle" alt="Block Puzzle">
@@ -69,6 +72,7 @@
             <a href="games.html" class="btn btn-small">Play Now</a>
           </div>
         </div>
+
       </div>
     </div>
   </section>
