@@ -388,28 +388,3 @@ footer {
     justify-content: center;
   }
 }
-
-.search-box {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin: 10px auto;
-  width: 300px;
-}
-
-.search-box input {
-  width: 100%;
-  padding: 12px;
-  border-radius: 20px;
-  border: 2px solid #ffd60a;
-  background: #111;
-  color: white;
-}
-
-.search-box button {
-  padding: 12px 15px;
-  border-radius: 50%;
-  border: none;
-  background: #ffd60a;
-  cursor: pointer;
-}
