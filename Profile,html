@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile - Neo Forge Games</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">
+        <span class="logo-icon">◆</span> Neo Forge Games
+      </a>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="games.html">Games</a>
+        <a href="news.html">New Games</a>
+        <a href="contact.html">Contact</a>
+        <a href="profile.html" class="active">Profile</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Your Profile</h2>
+
+      <!-- Demo Profile View -->
+      <div class="profile-box" id="profileView">
+        <div class="profile-avatar">N</div>
+        <h2>Neo Player</h2>
+        <p class="username">@neoplayer</p>
+        <div class="profile-stats">
+          <div class="stat">
+            <strong>12</strong>
+            <span>Games Played</span>
+          </div>
+          <div class="stat">
+            <strong>3</strong>
+            <span>Purchased</span>
+          </div>
+          <div class="stat">
+            <strong>48</strong>
+            <span>Hours</span>
+          </div>
+        </div>
+        <button class="btn" onclick="showEditForm()">Edit Profile</button>
+      </div>
+
+      <!-- Create / Edit Profile Form (hidden by default) -->
+      <div class="profile-box" id="editForm" style="display:none;">
+        <h2 style="color:#ffd60a; margin-bottom:25px;">Create / Edit Profile</h2>
+        <form onsubmit="event.preventDefault(); saveProfile();">
+          <div class="form-group" style="text-align:left;">
+            <label>Display Name</label>
+            <input type="text" id="displayName" required placeholder="Your name">
+          </div>
+          <div class="form-group" style="text-align:left;">
+            <label>Username</label>
+            <input type="text" id="username" required placeholder="@username">
+          </div>
+          <div class="form-group" style="text-align:left;">
+            <label>Bio</label>
+            <textarea id="bio" placeholder="Tell us about yourself..."></textarea>
+          </div>
+          <button type="submit" class="btn" style="width:100%; margin-top:10px;">Save Profile</button>
+          <button type="button" class="btn btn-outline" style="width:100%; margin-top:12px;" onclick="hideEditForm()">Cancel</button>
+        </form>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>© 2026 Neo Forge Games. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script>
+    function showEditForm() {
+      document.getElementById('profileView').style.display = 'none';
+      document.getElementById('editForm').style.display = 'block';
+    }
+    function hideEditForm() {
+      document.getElementById('editForm').style.display = 'none';
+      document.getElementById('profileView').style.display = 'block';
+    }
+    function saveProfile() {
+      alert('Profile saved! (Demo only – real accounts need a backend)');
+      hideEditForm();
+    }
+  </script>
+</body>
+</html>
