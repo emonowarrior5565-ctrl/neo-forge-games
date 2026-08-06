@@ -24,20 +24,4 @@ document.querySelectorAll('.game-card, .news-card').forEach(card => {
   card.style.transform = 'translateY(25px)';
   card.style.transition = 'opacity 0.55s ease, transform 0.55s ease';
   observer.observe(card);
-});
-const search = document.getElementById("gameSearch");
-const games = document.querySelectorAll(".game-card");
-
-search.addEventListener("keyup", function () {
-  let value = search.value.toLowerCase();
-
-  games.forEach(game => {
-    let name = game.innerText.toLowerCase();
-
-    if (name.includes(value)) {
-      game.style.display = "block";
-    } else {
-      game.style.display = "none";
-    }
-  });
-});
+}
