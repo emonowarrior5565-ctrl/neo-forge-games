@@ -390,16 +390,26 @@ footer {
 }
 
 .search-box {
-  text-align: center;
-  margin: 25px auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 10px auto;
+  width: 300px;
 }
 
 .search-box input {
-  width: 80%;
-  max-width: 500px;
-  padding: 15px 20px;
-  border-radius: 30px;
-  border: 2px solid #333;
-  outline: none;
-  font-size: 16px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 20px;
+  border: 2px solid #ffd60a;
+  background: #111;
+  color: white;
+}
+
+.search-box button {
+  padding: 12px 15px;
+  border-radius: 50%;
+  border: none;
+  background: #ffd60a;
+  cursor: pointer;
 }
