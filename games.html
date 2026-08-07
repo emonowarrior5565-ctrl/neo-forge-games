@@ -43,7 +43,7 @@
           <div class="game-info">
             <h3>Pixel Runner</h3>
             <p>Fast-paced endless runner with retro pixel graphics.</p>
-            <a href="#" class="btn btn-small">Play Now</a>
+            <button class="btn btn-small" onclick="playGame('games/pixel-runner/index.html')">Play Now</button>
           </div>
         </div>
 
@@ -55,7 +55,7 @@
           <div class="game-info">
             <h3>Space Drift</h3>
             <p>Survive the asteroid field in this minimalist space game.</p>
-            <a href="#" class="btn btn-small">Play Now</a>
+            <button class="btn btn-small" onclick="playGame('games/space-drift/index.html')">Play Now</button>
           </div>
         </div>
 
@@ -67,7 +67,7 @@
           <div class="game-info">
             <h3>Block Puzzle</h3>
             <p>Classic block-matching puzzle with modern twists.</p>
-            <a href="#" class="btn btn-small">Play Now</a>
+            <button class="btn btn-small" onclick="playGame('games/block-puzzle/index.html')">Play Now</button>
           </div>
         </div>
       </div>
@@ -117,6 +117,12 @@
     </div>
   </section>
 
+  <!-- Game Player Modal: opens in-page when "Play Now" is clicked -->
+  <div id="gameModal" class="modal">
+    <span class="modal-close" onclick="closeGame()">✖</span>
+    <iframe id="gameFrame" src=""></iframe>
+  </div>
+
   <footer>
     <div class="container">
       <p>© 2026 Neo Forge Games. All rights reserved.</p>
@@ -126,4 +132,3 @@
   <script src="script.js"></script>
 </body>
 </html>
-
