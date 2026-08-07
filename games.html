@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -132,3 +132,76 @@
   <script src="script.js"></script>
 </body>
 </html>
+<!-- ===== Secret Finder — Game Card (paste inside your games.html grid/container) ===== -->
+<a href="secret-finder-game.html" class="game-card sf-card">
+  <div class="sf-seal">
+    <span class="sf-num">10</span>
+    <span class="sf-lbl">Levels</span>
+  </div>
+  <h3 class="sf-title">Secret Finder</h3>
+  <p class="sf-tag">Something is always hidden nearby.</p>
+  <div class="sf-icons">🗝️ 🪙 🗺️ ✉️ 🔮</div>
+  <span class="sf-cta">Play Now →</span>
+</a>
+
+<style>
+  .sf-card{
+    --gold:#c9a227;
+    --gold-bright:#e8c65a;
+    --rust:#9a3d3d;
+    --ink-2:#171331;
+    --parchment:#ece1c4;
+
+    display:block;
+    width:260px;
+    text-decoration:none;
+    background: linear-gradient(180deg, rgba(236,225,196,0.05), rgba(236,225,196,0) 30%), var(--ink-2);
+    border:1px solid rgba(201,162,39,0.35);
+    border-radius:6px;
+    padding:22px 18px 18px;
+    text-align:center;
+    font-family:'Space Grotesk', Arial, sans-serif;
+    box-shadow:0 10px 24px rgba(0,0,0,0.35);
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .sf-card:hover{
+    transform:translateY(-4px);
+    box-shadow:0 16px 32px rgba(0,0,0,0.45);
+  }
+  .sf-seal{
+    width:56px;height:56px;
+    margin:0 auto 12px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #b5533f, var(--rust) 70%, #6f2727 100%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    box-shadow:inset 0 -2px 4px rgba(0,0,0,0.35), inset 0 2px 3px rgba(255,255,255,0.12);
+  }
+  .sf-num{
+    font-weight:700;font-size:1.1rem;color:var(--parchment);line-height:1;
+  }
+  .sf-lbl{
+    font-size:0.45rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--parchment);opacity:0.85;
+  }
+  .sf-title{
+    font-size:1.15rem;
+    color:var(--parchment);
+    letter-spacing:0.02em;
+    margin-bottom:4px;
+  }
+  .sf-tag{
+    font-size:0.75rem;
+    color:#a89cc4;
+    font-style:italic;
+    margin-bottom:12px;
+  }
+  .sf-icons{
+    font-size:1.1rem;
+    margin-bottom:14px;
+    opacity:0.9;
+  }
+  .sf-cta{
+    display:inline-block;
+    font-size:0.75rem;
+    font-weight:700;
+    letter-spacing:0.05em;
+    text-transform
