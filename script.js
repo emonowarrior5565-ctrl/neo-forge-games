@@ -70,3 +70,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 });
+function playGame(path) {
+  document.getElementById('gameFrame').src = path;
+  document.getElementById('gameModal').style.display = 'flex';
+}
+function closeGame() {
+  document.getElementById('gameFrame').src = '';
+  document.getElementById('gameModal').style.display = 'none';
+}
