@@ -3,27 +3,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // 1. Search Bar Functionality
   // ==========================================
-  // Targeting both potential search input IDs
-  const searchInput = document.getElementById("gameSearch") || document.getElementById("game-search");
+  const searchInput = document.getElementById('gameSearch') || document.getElementById('game-search');
 
   if (searchInput) {
-    searchInput.addEventListener("input", (e) => {
+    searchInput.addEventListener('input', (e) => {
       const filterValue = e.target.value.toLowerCase().trim();
-      const gameCards = document.querySelectorAll(".game-card");
+      const gameCards = document.querySelectorAll('.game-card');
 
       gameCards.forEach((card) => {
-        const titleElement = card.querySelector("h3");
-        
-        if (titleElement) {
-          const gameTitle = titleElement.textContent.toLowerCase();
+        const titleElement = card.querySelector('h3');
+        if (!titleElement) return;
 
-          // Title match hone par dikhana, warna hide kar dena
-          if (gameTitle.includes(filterValue)) {
-            card.style.display = "";
-          } else {
-            card.style.display = "none";
-          }
-        }
+        const gameTitle = titleElement.textContent.toLowerCase();
+        card.style.display = gameTitle.includes(filterValue) ? '' : 'none';
       });
     });
   }
@@ -31,14 +23,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // 2. Smooth Scroll (for same-page links)
   // ==========================================
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
     anchor.addEventListener('click', function (e) {
       const targetId = this.getAttribute('href');
-      
-      // Prevent crash if href is just "#"
-      if (targetId === '#' || targetId === '') return;
 
-      const target = document.querySelector(targetId);
+      // Skip empty or bare "#" links
+      if (!targetId || targetId === '#') return;
+
+      let target = null;
+      try {
+        target = document.querySelector(targetId);
+      } catch (err) {
+        // Invalid selector (e.g. contains spaces/special chars) — ignore safely
+        return;
+      }
+
       if (target) {
         e.preventDefault();
         target.scrollIntoView({ behavior: 'smooth' });
@@ -49,20 +48,25 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==========================================
   // 3. Scroll Fade-In Animation
   // ==========================================
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.style.opacity = '1';
-        entry.target.style.transform = 'translateY(0)';
-      }
-    });
-  }, { threshold: 0.12 });
+  const fadeTargets = document.querySelectorAll('.game-card, .news-card');
 
-  document.querySelectorAll('.game-card, .news-card').forEach(card => {
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(25px)';
-    card.style.transition = 'opacity 0.55s ease, transform 0.55s ease';
-    observer.observe(card);
-  });
+  if (fadeTargets.length && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+          observer.unobserve(entry.target); // animate once, then stop watching
+        }
+      });
+    }, { threshold: 0.12 });
+
+    fadeTargets.forEach((card) => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(25px)';
+      card.style.transition = 'opacity 0.55s ease, transform 0.55s ease';
+      observer.observe(card);
+    });
+  }
 
 });
