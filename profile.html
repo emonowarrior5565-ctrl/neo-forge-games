@@ -28,7 +28,116 @@
     <div class="container">
       <h2 class="section-title">Your Profile</h2>
 
-      <!-- Profile View -->
+      <!-- Profile View: shown when a user is logged in -->
       <div class="profile-box" id="profileView" style="display:none;">
         <div class="profile-avatar" id="avatarLetter">?</div>
-        <h2 id="displayNameText">Player</h2
+        <h2 id="displayNameText">Player</h2>
+        <p id="displayEmailText" style="opacity:0.7;"></p>
+
+        <div class="form-group">
+          <label for="editName">Display Name</label>
+          <input type="text" id="editName" name="editName" placeholder="Enter a display name">
+        </div>
+
+        <button type="button" class="btn" id="saveProfileBtn" style="width:100%;">Save Changes</button>
+        <button type="button" class="btn btn-small" id="logoutBtn" style="width:100%; margin-top:10px;">Log Out</button>
+      </div>
+
+      <!-- Login / Signup Form: shown when no user is saved -->
+      <form class="contact-form" id="loginForm">
+        <div class="form-group">
+          <label for="loginName">Display Name</label>
+          <input type="text" id="loginName" name="loginName" required placeholder="Enter your name">
+        </div>
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" name="loginEmail" required placeholder="you@example.com">
+        </div>
+        <button type="submit" class="btn" style="width:100%;">Create Profile</button>
+      </form>
+
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <p>© 2026 Neo Forge Games. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script>
+    const STORAGE_KEY = 'neoForgeProfile';
+
+    const profileView   = document.getElementById('profileView');
+    const loginForm      = document.getElementById('loginForm');
+    const avatarLetter   = document.getElementById('avatarLetter');
+    const displayNameEl  = document.getElementById('displayNameText');
+    const displayEmailEl = document.getElementById('displayEmailText');
+    const editNameInput  = document.getElementById('editName');
+
+    function loadProfile() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }
+
+    function saveProfile(profile) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    }
+
+    function renderProfile(profile) {
+      loginForm.style.display = 'none';
+      profileView.style.display = 'block';
+      avatarLetter.textContent = profile.name.charAt(0).toUpperCase();
+      displayNameEl.textContent = profile.name;
+      displayEmailEl.textContent = profile.email;
+      editNameInput.value = profile.name;
+    }
+
+    function renderLoggedOut() {
+      profileView.style.display = 'none';
+      loginForm.style.display = 'block';
+      loginForm.reset();
+    }
+
+    // On page load, check if a profile already exists
+    const existing = loadProfile();
+    if (existing) {
+      renderProfile(existing);
+    } else {
+      renderLoggedOut();
+    }
+
+    // Create profile (login/signup)
+    loginForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const name = document.getElementById('loginName').value.trim();
+      const email = document.getElementById('loginEmail').value.trim();
+      if (!name || !email) return;
+
+      const profile = { name, email };
+      saveProfile(profile);
+      renderProfile(profile);
+    });
+
+    // Save edited display name
+    document.getElementById('saveProfileBtn').addEventListener('click', function () {
+      const profile = loadProfile();
+      if (!profile) return;
+
+      const newName = editNameInput.value.trim();
+      if (!newName) return;
+
+      profile.name = newName;
+      saveProfile(profile);
+      renderProfile(profile);
+    });
+
+    // Log out (clears saved profile)
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+      localStorage.removeItem(STORAGE_KEY);
+      renderLoggedOut();
+    });
+  </script>
+</body>
+</html>
