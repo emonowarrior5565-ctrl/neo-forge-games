@@ -78,3 +78,7 @@ function closeGame() {
   document.getElementById('gameFrame').src = '';
   document.getElementById('gameModal').style.display = 'none';
 }
+
+function playGame(path) {
+    window.location.href = path;
+}
