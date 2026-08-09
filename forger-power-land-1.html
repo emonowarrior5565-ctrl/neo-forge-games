@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MY CITY — Level 10</title>
+<style>
+  :root{
+    --bg1:#0c1220; --bg2:#050810;
+    --panel:#121a2c; --panel2:#1a2540;
+    --ink:#eaf1ff; --muted:#7b8aa8;
+    --gold:#fbbf24; --green:#4ade80; --red:#f87171; --blue:#38bdf8; --purple:#c084fc;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#000;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:var(--ink);touch-action:none;}
+  #stage{position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 0%,#182238 0%,#04060c 75%);}
+  #frame{position:relative;width:min(520px,100vw);height:min(100vh,960px);display:flex;flex-direction:column;}
+
+  .hud{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 10px;
+    background:linear-gradient(180deg,var(--panel),transparent);z-index:6;flex-shrink:0;gap:6px;}
+  .hud-col{display:flex;flex-direction:column;gap:2px;}
+  .stat{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;}
+  .stat .ic{font-size:13px;}
+  .cash{color:var(--gold);}
+  .pop{color:var(--blue);}
+  .edu{color:var(--purple);}
+  .income{color:var(--green); font-size:10px; font-weight:600;}
+  .traffic{color:var(--red); font-size:10px; font-weight:600;}
+  .clock{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;}
+  .phase{font-size:9px;color:var(--muted);text-align:right;}
+  .dayLbl{font-size:9px;color:var(--muted);text-align:right;}
+  .townLvl{font-size:11px;font-weight:800;color:var(--gold);background:rgba(251,191,36,0.15);
+    padding:2px 8px;border-radius:8px;border:1px solid rgba(251,191,36,0.35);}
+  .pauseBtn{
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
+    width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    font-size:14px; cursor:pointer; margin-left:6px; flex-shrink:0;
+  }
+  .hud-right{display:flex; align-items:flex-start;}
+
+  #gameWrap{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;}
+  canvas{display:block;touch-action:none; border-radius:8px; box-shadow:0 8px 32px rgba(0,0,0,0.5);}
+
+  .toast{
+    position:absolute; top:6px; left:50%; transform:translateX(-50%);
+    background:rgba(10,14,23,0.94); border:1px solid rgba(255,255,255,0.15);
+    padding:6px 14px; border-radius:18px; font-size:11px; letter-spacing:0.3px;
+    z-index:20; opacity:0; transition:opacity 0.25s, transform 0.25s; pointer-events:none;
+    white-space:nowrap; max-width:90%; text-align:center;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(3px); }
+
+  #buildFab{
+    position:absolute; right:12px; bottom:12px; z-index:8;
+    display:flex; flex-direction:column; align-items:center; gap:1px;
+    background:linear-gradient(135deg,#22d3ee,#4ade80); color:#031018;
+    width:54px; height:54px; border-radius:16px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.45), 0 0 18px rgba(74,222,128,0.3);
+    cursor:pointer; justify-content:center;
+  }
+  #buildFab .ic{ font-size:20px; line-height:1; }
+  #buildFab .lbl{ font-size:7px; font-weight:800; letter-spacing:0.4px; }
+  #buildFab .badge{
+    position:absolute; top:-5px; left:-5px; background:#0f172a; border:1.5px solid #4ade80;
+    border-radius:7px; font-size:11px; padding:1px 3px;
+  }
+
+  .sheet{
+    position:absolute; inset:0; z-index:25; display:none;
+    align-items:flex-end; justify-content:center;
+    background:rgba(4,6,12,0.55);
+  }
+  .sheet.open{ display:flex; }
+  .sheet-card{
+    width:100%; max-height:78%; background:var(--panel); border-radius:18px 18px 0 0;
+    padding:12px 10px calc(12px + env(safe-area-inset-bottom)) 10px; overflow-y:auto;
+    border-top:1px solid rgba(255,255,255,0.1);
+  }
+  .sheet-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:0 4px;}
+  .sheet-head h3{ margin:0; font-size:14px; letter-spacing:0.4px; }
+  .sheet-close{ background:rgba(255,255,255,0.08); border:none; color:var(--ink); width:26px;height:26px;
+    border-radius:7px; font-size:13px; cursor:pointer; }
+  .tool-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .tool{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    background:var(--panel2); border:1.5px solid transparent; border-radius:12px;
+    padding:9px 3px; cursor:pointer; color:var(--ink);
+  }
+  .tool .ic{font-size:18px;}
+  .tool .lbl{font-size:9px; letter-spacing:0.15px; color:var(--ink); font-weight:700;}
+  .tool .cost{font-size:8.5px; color:var(--gold); font-weight:700;}
+  .tool.active{ border-color:var(--blue); background:#1e2c4d; box-shadow:0 0 10px rgba(56,189,248,0.3); }
+  .tool.locked{ opacity:0.38; }
+
+  .overlay{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(5,7,16,0.93); backdrop-filter:blur(6px); z-index:30; text-align:center; padding:22px;
+  }
+  .overlay h1{ font-size:24px; margin:0 0 5px 0; letter-spacing:1px;
+    background:linear-gradient(90deg,#fbbf24,#4ade80); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .overlay .sub{ color:var(--muted); font-size:12px; margin-bottom:16px; line-height:1.65; max-width:310px;}
+  .overlay .sub b{ color:var(--ink); }
+  .play-btn{ background:linear-gradient(135deg,#4ade80,#22d3ee); color:#031018; border:none; font-weight:800;
+    font-size:14px; padding:12px 28px; border-radius:24px; cursor:pointer; box-shadow:0 0 22px rgba(74,222,128,0.3); margin:4px;}
+  .play-btn:active{ transform:scale(0.96); }
+  .ghost-btn{
+    background:transparent; border:1.5px solid rgba(255,255,255,0.25); color:var(--ink);
+    font-weight:700; font-size:12px; padding:10px 22px; border-radius:20px; cursor:pointer; margin:4px;
+  }
+  .ghost-btn:active{ transform:scale(0.96); }
+  .howto-body{ text-align:left; max-width:330px; font-size:11.5px; color:var(--muted); line-height:1.75; max-height:50vh; overflow-y:auto; margin-bottom:12px;}
+  .howto-body b{ color:var(--ink); }
+  .howto-body .sec{ color:var(--gold); font-weight:700; margin-top:8px; display:block; }
+  .btnrow{ display:flex; flex-wrap:wrap; justify-content:center; }
+  .goal-bar{
+    width:90%; max-width:280px; height:10px; background:rgba(255,255,255,0.1); border-radius:6px;
+    margin:8px auto 4px; overflow:hidden;
+  }
+  .goal-fill{ height:100%; background:linear-gradient(90deg,#fbbf24,#4ade80); border-radius:6px; transition:width 0.4s; }
+  .goal-txt{ font-size:11px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div id="stage"><div id="frame">
+
+  <div class="hud">
+    <div class="hud-col">
+      <div class="stat cash"><span class="ic">$</span><span id="cashEl">0</span></div>
+      <div class="stat pop"><span class="ic">👥</span><span id="popEl">0</span></div>
+      <div class="stat edu"><span class="ic">📚</span><span id="eduEl">0</span></div>
+      <div class="income" id="incomeEl">+$0/s</div>
+      <div class="traffic" id="trafficEl"></div>
+    </div>
+    <div class="hud-col" style="align-items:center; gap:4px;">
+      <div class="townLvl" id="townLvlEl">Town Lv 1</div>
+      <div class="goal-bar"><div class="goal-fill" id="goalFill" style="width:10%"></div></div>
+      <div class="goal-txt" id="goalTxt">Goal: Level 10</div>
+    </div>
+    <div class="hud-right">
+      <div class="hud-col" style="align-items:flex-end;">
+        <div class="clock"><span id="clockIcon">☀️</span><span id="clockEl">06:00</span></div>
+        <div class="phase" id="phaseEl">Morning</div>
+        <div class="dayLbl" id="dayEl">Day 1</div>
+      </div>
+      <div class="pauseBtn" id="pauseBtn">⏸</div>
+    </div>
+  </div>
+
+  <div id="gameWrap">
+    <canvas id="game"></canvas>
+    <div class="toast" id="toast"></div>
+    <div id="buildFab">
+      <div class="badge" id="fabBadge">🗺️</div>
+      <div class="ic">🔨</div>
+      <div class="lbl">BUILD</div>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet">
+    <div class="sheet-card">
+      <div class="sheet-head">
+        <h3>Choose a tool</h3>
+        <button class="sheet-close" id="sheetClose">✕</button>
+      </div>
+      <div class="tool-grid" id="toolGrid"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="startOverlay">
+    <h1>MY CITY</h1>
+    <div class="sub">Grow your town to <b>Level 10</b>!<br>
+      Build schools for education, offices for jobs, tourism for population.<br>
+      Watch traffic &amp; unlock advanced buildings.</div>
+    <div class="btnrow">
+      <button class="play-btn" id="playBtn">START CITY</button>
+      <button class="ghost-btn" id="howtoBtnStart">How to Play</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="howtoOverlay" style="display:none;">
+    <h1 style="font-size:20px;">How to Play</h1>
+    <div class="howto-body">
+      <span class="sec">🎯 Goal</span>
+      Reach <b>Town Level 10</b>. Level rises with Population + Education.
+      <span class="sec">🗺️ Land</span>
+      Buy land next to owned tiles. Price rises with distance from Town Hall.
+      <span class="sec">📚 Education</span>
+      Schools, High Schools &amp; University raise Education. Higher Education unlocks advanced buildings.
+      <span class="sec">🏢 Jobs &amp; Offices</span>
+      Offices give jobs &amp; strong income. Train Station reduces traffic.
+      <span class="sec">🚗 Traffic</span>
+      Too many houses, restaurants &amp; fuel stations without enough roads/train → income drops.
+      <span class="sec">🗽 Tourism</span>
+      Statue of Unity &amp; Hotel attract people and boost population/income.
+      <span class="sec">🏥 Professions</span>
+      Hospital, Police, School levels, Graveyard, Bank, Fire Station — all help your city.
+      <span class="sec">⛰️ Terrain</span>
+      Mountains &amp; rivers cannot be built on. Water bonus near river. Desert earns less without water.
+      <span class="sec">✈️ Big Buildings</span>
+      Airport &amp; Statue need 2×2 empty owned land.
+    </div>
+    <button class="play-btn" id="howtoCloseBtn">Got it</button>
+  </div>
+
+  <div class="overlay" id="pauseOverlay" style="display:none;">
+    <h1 style="font-size:22px;">Paused</h1>
+    <div class="sub">Your city is waiting.</div>
+    <div class="btnrow">
+      <button class="play-btn" id="resumeBtn">Resume</button>
+      <button class="ghost-btn" id="howtoBtnPause">How to Play</button>
+      <button class="ghost-btn" id="restartBtn">New City</button>
+      <button class="ghost-btn" id="quitBtn" style="border-color:rgba(248,113,113,0.4); color:#f87171;">Quit</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="winOverlay" style="display:none;">
+    <h1>🎉 Town Level 10!</h1>
+    <div class="sub">Congratulations! You built a thriving city.</div>
+    <div class="btnrow">
+      <button class="play-btn" id="winContinue">Keep Playing</button>
+      <button class="ghost-btn" id="winNew">New City</button>
+    </div>
+  </div>
+
+</div></div>
+
+<script>
+(function(){
+"use strict";
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const gameWrap = document.getElementById('gameWrap');
+let DPR = Math.min(window.devicePixelRatio||1, 2);
+let W, H, tile;
+
+const GRID = 12;
+const CENTER = 5;
+const DAY_LENGTH = 1800;
+
+function resize(){
+  const rect = gameWrap.getBoundingClientRect();
+  const size = Math.min(rect.width, rect.height) - 4;
+  W = size; H = size;
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  tile = W / GRID;
+}
+window.addEventListener('resize', resize);
+
+// ===================== BUILDINGS =====================
+const BUILD = {
+  // Housing
+  hut:        { icon:'🛖', label:'Hut',          cost:60,   income:0.8,  cap:2,  edu:0,  buildT:1.5, unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  house:      { icon:'🏠', label:'House',        cost:140,  income:1.8,  cap:4,  edu:0,  buildT:2.5, unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  villa:      { icon:'🏡', label:'Villa',        cost:380,  income:4.5,  cap:7,  edu:0,  buildT:4,   unlockEdu:0,  unlockPop:12, unlockTown:2 },
+  // Commerce
+  shop:       { icon:'🏪', label:'Shop',         cost:260,  income:5,    cap:0,  edu:0,  buildT:3,   unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  restaurant: { icon:'🍽️', label:'Restaurant',   cost:320,  income:6.5,  cap:0,  edu:0,  buildT:3.5, unlockEdu:0,  unlockPop:8,  unlockTown:2 },
+  fuel:       { icon:'⛽', label:'Fuel Station', cost:280,  income:5.5,  cap:0,  edu:0,  buildT:3,   unlockEdu:0,  unlockPop:5,  unlockTown:2 },
+  // Industry & Jobs
+  factory:    { icon:'🏭', label:'Factory',      cost:480,  income:12,   cap:0,  edu:0,  buildT:4.5, unlockEdu:0,  unlockPop:0,  unlockTown:2 },
+  office:     { icon:'🏢', label:'Office',       cost:550,  income:11,   cap:0,  edu:0,  buildT:5,   unlockEdu:5,  unlockPop:15, unlockTown:3 },
+  bank:       { icon:'🏦', label:'Bank',         cost:700,  income:16,   cap:0,  edu:0,  buildT:5,   unlockEdu:10, unlockPop:25, unlockTown:4 },
+  // Education (raises edu)
+  school:     { icon:'🏫', label:'School',       cost:350,  income:1,    cap:0,  edu:3,  buildT:4,   unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  highschool: { icon:'🎓', label:'High School',  cost:600,  income:2,    cap:0,  edu:7,  buildT:5,   unlockEdu:8,  unlockPop:20, unlockTown:3 },
+  university: { icon:'🏛️', label:'University',  cost:1100, income:4,    cap:0,  edu:15, buildT:7,   unlockEdu:18, unlockPop:40, unlockTown:5 },
+  // Health & Safety
+  clinic:     { icon:'🏥', label:'Clinic',       cost:300,  income:2,    cap:0,  edu:0,  buildT:3,   unlockEdu:0,  unlockPop:5,  unlockTown:2 },
+  hospital:   { icon:'🏨', label:'Hospital',     cost:800,  income:5,    cap:0,  edu:0,  buildT:6,   unlockEdu:12, unlockPop:30, unlockTown:4 },
+  police:     { icon:'🚓', label:'Police',       cost:400,  income:2.5,  cap:0,  edu:0,  buildT:4,   unlockEdu:0,  unlockPop:10, unlockTown:2 },
+  fire:       { icon:'🚒', label:'Fire Station', cost:420,  income:2.5,  cap:0,  edu:0,  buildT:4,   unlockEdu:0,  unlockPop:12, unlockTown:3 },
+  graveyard:  { icon:'🪦', label:'Graveyard',    cost:180,  income:0.5,  cap:0,  edu:0,  buildT:2,   unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  // Transport
+  road:       { icon:'🛣️', label:'Road',         cost:18,   income:0,    cap:0,  edu:0,  buildT:0.4, unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  train:      { icon:'🚉', label:'Train Station',cost:900,  income:8,    cap:0,  edu:0,  buildT:6,   unlockEdu:5,  unlockPop:20, unlockTown:3, size:2 },
+  // Tourism
+  hotel:      { icon:'🏩', label:'Hotel',        cost:650,  income:10,   cap:0,  edu:0,  buildT:5,   unlockEdu:0,  unlockPop:18, unlockTown:3 },
+  statue:     { icon:'🗽', label:'Statue Unity', cost:1500, income:25,   cap:0,  edu:0,  buildT:8,   unlockEdu:0,  unlockPop:35, unlockTown:4, size:2 },
+  // Big
+  airport:    { icon:'✈️', label:'Airport',      cost:1400, income:40,   cap:0,  edu:0,  buildT:8,   unlockEdu:10, unlockPop:45, unlockTown:5, size:2 },
+  // Parks & Hall
+  park:       { icon:'🌳', label:'Park',         cost:100,  income:0,    cap:0,  edu:0,  buildT:1.5, unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  townhall:   { icon:'🏛️', label:'Town Hall',    cost:0,    income:4,    cap:0,  edu:0,  buildT:0,   unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+};
+
+const HOUSE_TYPES = ['hut','house','villa'];
+const TRAFFIC_TYPES = ['hut','house','villa','restaurant','fuel'];
+
+// ===================== STATE =====================
+let grid, cash, population, education, incomeRate, trafficPenalty, townLevel, floaters, running, paused, won;
+let totalElapsed = 0, animTime = 0, tool = 'buy';
+let cars = [];
+const CAR_COLORS = ['#ef4444','#3b82f6','#22c55e','#f59e0b','#a855f7','#ec4899','#14b8a6','#f97316'];
+
+function rnd(a,b){ return a + Math.random()*(b-a); }
+function ri(a,b){ return Math.floor(rnd(a,b+1)); }
+function inBounds(r,c){ return r>=0 && r<GRID && c>=0 && c<GRID; }
+function dist(r,c){ return Math.abs(r-CENTER) + Math.abs(c-CENTER); }
+
+function generateTerrain(g){
+  // River
+  let col = ri(2, GRID-3);
+  for(let r=0;r<GRID;r++){
+    if(!(r===CENTER && Math.abs(col-CENTER)<=1)) g[r][col].type = 'river';
+    if(Math.random()<0.5) col += (Math.random()<0.5?-1:1);
+    col = Math.max(1, Math.min(GRID-2, col));
+  }
+  // Mountains
+  const blobs = ri(2,3);
+  for(let b=0;b<blobs;b++){
+    let tries=0, or_, oc_;
+    do{ or_=ri(0,GRID-1); oc_=ri(0,GRID-1); tries++; } while(dist(or_,oc_)<4 && tries<50);
+    const seeds=[[or_,oc_]];
+    for(let i=0;i<ri(5,9);i++){
+      const [pr,pc]=seeds[ri(0,seeds.length-1)];
+      const nr=pr+ri(-1,1), nc=pc+ri(-1,1);
+      if(inBounds(nr,nc) && dist(nr,nc)>=4 && g[nr][nc].type==='plain'){
+        g[nr][nc].type='mountain'; seeds.push([nr,nc]);
+      }
+    }
+  }
+  // Desert
+  {
+    let tries=0, or_, oc_;
+    do{ or_=ri(0,GRID-1); oc_=ri(0,GRID-1); tries++; } while(dist(or_,oc_)<4 && tries<50);
+    const seeds=[[or_,oc_]];
+    if(g[or_][oc_].type==='plain') g[or_][oc_].type='desert';
+    for(let i=0;i<ri(6,11);i++){
+      const [pr,pc]=seeds[ri(0,seeds.length-1)];
+      const nr=pr+ri(-1,1), nc=pc+ri(-1,1);
+      if(inBounds(nr,nc) && dist(nr,nc)>=4 && g[nr][nc].type==='plain'){
+        g[nr][nc].type='desert'; seeds.push([nr,nc]);
+      }
+    }
+  }
+  // Clear center
+  for(let dr=-2;dr<=2;dr++) for(let dc=-2;dc<=2;dc++){
+    const r=CENTER+dr, c=CENTER+dc;
+    if(inBounds(r,c) && g[r][c].type!=='plain') g[r][c].type='plain';
+  }
+}
+
+function newGrid(){
+  const g=[];
+  for(let r=0;r<GRID;r++){
+    const row=[];
+    for(let c=0;c<GRID;c++){
+      row.push({type:'plain',owned:false,building:null,underConstruction:false,buildTimer:0,pulse:0,airportAnchor:null,isAnchor:false});
+    }
+    g.push(row);
+  }
+  generateTerrain(g);
+  g[CENTER][CENTER].owned=true;
+  g[CENTER][CENTER].building={type:'townhall'};
+  return g;
+}
+
+function resetGame(){
+  grid=newGrid();
+  cash=900;
+  population=0;
+  education=0;
+  incomeRate=0;
+  trafficPenalty=1;
+  townLevel=1;
+  floaters=[];
+  cars=[];
+  totalElapsed=0;
+  running=true;
+  paused=false;
+  won=false;
+  tool='buy';
+}
+
+// ===================== TOOLS =====================
+const TOOL_LIST = [
+  'buy','road','hut','house','villa','shop','restaurant','fuel',
+  'park','factory','office','bank','school','highschool','university',
+  'clinic','hospital','police','fire','graveyard','hotel','train','statue','airport','bulldoze'
+];
+
+const TOOL_META = {};
+for(const k of TOOL_LIST){
+  if(k==='buy') TOOL_META[k]={icon:'🗺️',label:'Buy Land'};
+  else if(k==='bulldoze') TOOL_META[k]={icon:'🧨',label:'Demolish'};
+  else {
+    const b=BUILD[k];
+    TOOL_META[k]={icon:b.icon,label:b.label,cost:b.cost,unlockEdu:b.unlockEdu,unlockPop:b.unlockPop,unlockTown:b.unlockTown};
+  }
+}
+
+function isUnlocked(key){
+  if(key==='buy'||key==='bulldoze'||key==='road'||key==='hut'||key==='house'||key==='park'||key==='shop'||key==='graveyard') return true;
+  const m=TOOL_META[key];
+  if(!m) return false;
+  if(m.unlockEdu && education < m.unlockEdu) return false;
+  if(m.unlockPop && population < m.unlockPop) return false;
+  if(m.unlockTown && townLevel < m.unlockTown) return false;
+  return true;
+}
+
+function buildToolbar(){
+  const gridEl=document.getElementById('toolGrid');
+  gridEl.innerHTML='';
+  for(const key of TOOL_LIST){
+    const meta=TOOL_META[key];
+    const locked=!isUnlocked(key);
+    const btn=document.createElement('div');
+    btn.className='tool'+(tool===key?' active':'')+(locked?' locked':'');
+    btn.dataset.tool=key;
+    let costLine;
+    if(key==='bulldoze') costLine=`<div class="cost" style="color:#f87171;">-50% back</div>`;
+    else if(key==='buy') costLine=`<div class="cost">price varies</div>`;
+    else if(locked){
+      let req=[];
+      if(meta.unlockEdu) req.push('Edu '+meta.unlockEdu);
+      if(meta.unlockPop) req.push('Pop '+meta.unlockPop);
+      if(meta.unlockTown) req.push('Town '+meta.unlockTown);
+      costLine=`<div class="cost">🔒 ${req.join('/')}</div>`;
+    } else costLine=`<div class="cost">$${meta.cost}</div>`;
+    btn.innerHTML=`<div class="ic">${meta.icon}</div><div class="lbl">${meta.label}</div>`+costLine;
+    btn.addEventListener('click',()=>{
+      if(locked){ showToast(meta.label+' locked'); return; }
+      tool=key;
+      refreshToolbar();
+      document.getElementById('fabBadge').textContent=meta.icon;
+      closeSheet();
+    });
+    gridEl.appendChild(btn);
+  }
+}
+function refreshToolbar(){
+  document.querySelectorAll('.tool').forEach(el=>el.classList.toggle('active',el.dataset.tool===tool));
+}
+
+const sheet=document.getElementById('sheet');
+const buildFab=document.getElementById('buildFab');
+function openSheet(){ sheet.classList.add('open'); }
+function closeSheet(){ sheet.classList.remove('open'); }
+buildFab.addEventListener('click',openSheet);
+document.getElementById('sheetClose').addEventListener('click',closeSheet);
+sheet.addEventListener('click',e=>{ if(e.target===sheet) closeSheet(); });
+
+// ===================== HELPERS =====================
+function landCost(r,c){
+  const base=55 + dist(r,c)*28;
+  if(grid[r][c].type==='desert') return Math.round(base*0.7);
+  return base;
+}
+function neighbors(r,c){
+  return [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].filter(([rr,cc])=>inBounds(rr,cc));
+}
+function isBuyable(r,c){
+  const t=grid[r][c];
+  if(t.owned) return false;
+  if(t.type==='mountain'||t.type==='river') return false;
+  return neighbors(r,c).some(([rr,cc])=>grid[rr][cc].owned);
+}
+function hasAdjacent(r,c,type){
+  return neighbors(r,c).some(([rr,cc])=>{
+    const t=grid[rr][cc];
+    return t.building && !t.underConstruction && t.building.type===type;
+  });
+}
+function countAdjacent(r,c,type){
+  return neighbors(r,c).filter(([rr,cc])=>{
+    const t=grid[rr][cc];
+    return t.building && !t.underConstruction && t.building.type===type;
+  }).length;
+}
+function hasWater(r,c){
+  return neighbors(r,c).some(([rr,cc])=>grid[rr][cc].type==='river');
+}
+function countType(type){
+  let n=0;
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+    const t=grid[r][c];
+    if(t.building && !t.underConstruction && t.building.type===type){
+      if((type==='airport'||type==='statue'||type==='train') && !t.isAnchor) continue;
+      n++;
+    }
+  }
+  return n;
+}
+
+let toastTimer=null;
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),1600);
+}
+function addFloater(r,c,text,color){
+  floaters.push({r,c,text,color,t:0,life:1.1});
+}
+
+// ===================== PLACE BIG =====================
+function tryPlaceBig(r,c,type){
+  const def=BUILD[type];
+  if(r+1>=GRID||c+1>=GRID){ showToast('Not enough room'); return; }
+  const cells=[[r,c],[r,c+1],[r+1,c],[r+1,c+1]];
+  for(const [rr,cc] of cells){
+    const t=grid[rr][cc];
+    if(!t.owned){ showToast('Own all 4 tiles first'); return; }
+    if(t.building){ showToast('Area must be empty'); return; }
+    if(t.type==='mountain'||t.type==='river'){ showToast('Needs flat land'); return; }
+  }
+  if(cash<def.cost){ showToast('Need $'+def.cost); return; }
+  cash-=def.cost;
+  for(const [rr,cc] of cells){
+    grid[rr][cc].building={type};
+    grid[rr][cc].underConstruction=true;
+    grid[rr][cc].buildTimer=def.buildT;
+    grid[rr][cc].airportAnchor=[r,c];
+    grid[rr][cc].isAnchor=(rr===r&&cc===c);
+  }
+  addFloater(r,c,'-$'+def.cost,'#f87171');
+}
+
+function demolishAt(r,c){
+  const t=grid[r][c];
+  if(!t.building||t.building.type==='townhall'){ showToast('Nothing to demolish'); return; }
+  const type=t.building.type;
+  if(type==='airport'||type==='statue'||type==='train'){
+    const [ar,ac]=t.airportAnchor;
+    const def=BUILD[type];
+    const refund=Math.floor(def.cost*0.5);
+    cash+=refund;
+    for(let rr=ar;rr<=ar+1;rr++) for(let cc=ac;cc<=ac+1;cc++){
+      grid[rr][cc].building=null; grid[rr][cc].underConstruction=false;
+      grid[rr][cc].airportAnchor=null; grid[rr][cc].isAnchor=false;
+    }
+    addFloater(ar,ac,'+$'+refund,'#4ade80');
+    return;
+  }
+  const def=BUILD[type];
+  const refund=Math.floor(def.cost*0.5);
+  cash+=refund;
+  t.building=null; t.underConstruction=false;
+  addFloater(r,c,'+$'+refund,'#4ade80');
+}
+
+function handleTileTap(r,c){
+  if(!running||paused) return;
+  const t=grid[r][c];
+  if(tool==='bulldoze'){ demolishAt(r,c); return; }
+  if(t.type==='mountain'){ showToast("Mountain — can't build"); return; }
+  if(t.type==='river'){ showToast("River — water source"); return; }
+
+  if(tool==='buy'){
+    if(t.owned){ showToast('Already owned'); return; }
+    if(!isBuyable(r,c)){ showToast('Buy next to owned land'); return; }
+    const cost=landCost(r,c);
+    if(cash<cost){ showToast('Need $'+cost); return; }
+    cash-=cost; t.owned=true; t.pulse=1;
+    addFloater(r,c,'-$'+cost,'#f87171');
+    return;
+  }
+
+  if(['airport','statue','train'].includes(tool)){
+    if(!isUnlocked(tool)){ showToast(TOOL_META[tool].label+' locked'); return; }
+    tryPlaceBig(r,c,tool);
+    return;
+  }
+
+  if(!isUnlocked(tool)){ showToast(TOOL_META[tool].label+' locked'); return; }
+  const def=BUILD[tool];
+  if(!t.owned){ showToast('Buy land first'); return; }
+  if(t.building){ showToast('Already has building'); return; }
+  if(cash<def.cost){ showToast('Need $'+def.cost); return; }
+  cash-=def.cost;
+  t.building={type:tool};
+  t.underConstruction=true;
+  t.buildTimer=def.buildT;
+  addFloater(r,c,'-$'+def.cost,'#f87171');
+}
+
+canvas.addEventListener('click',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  const c=Math.floor(x/tile), r=Math.floor(y/tile);
+  if(inBounds(r,c)) handleTileTap(r,c);
+});
+canvas.addEventListener('touchend',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const t0=e.changedTouches[0];
+  const x=t0.clientX-rect.left, y=t0.clientY-rect.top;
+  const c=Math.floor(x/tile), r=Math.floor(y/tile);
+  if(inBounds(r,c)) handleTileTap(r,c);
+  e.preventDefault();
+},{passive:false});
+
+// ===================== ECONOMY =====================
+function calcTownLevel(pop,edu){
+  // Level 1-10 based on pop + edu
+  const score = pop*0.6 + edu*1.8;
+  if(score<8) return 1;
+  if(score<18) return 2;
+  if(score<32) return 3;
+  if(score<50) return 4;
+  if(score<72) return 5;
+  if(score<100) return 6;
+  if(score<135) return 7;
+  if(score<175) return 8;
+  if(score<220) return 9;
+  return 10;
+}
+
+function economyTick(){
+  let income = BUILD.townhall.income;
+  let pop=0, edu=0;
+  let trafficLoad=0, trafficRelief=0;
+
+  for(let r=0;r<GRID;r++){
+    for(let c=0;c<GRID;c++){
+      const t=grid[r][c];
+      if(!t.building||t.underConstruction) continue;
+      const type=t.building.type;
+      if(type==='townhall'||type==='road'||type==='park'||type==='graveyard') continue;
+      if((type==='airport'||type==='statue'||type==='train') && !t.isAnchor) continue;
+
+      const def=BUILD[type];
+      let amt=def.income;
+
+      if(HOUSE_TYPES.includes(type)) pop += def.cap;
+      if(def.edu) edu += def.edu;
+
+      // Tourism bonus: statue & hotel boost nearby houses
+      if(HOUSE_TYPES.includes(type)){
+        if(hasAdjacent(r,c,'statue')||hasAdjacent(r,c,'hotel')) amt*=1.25;
+      }
+
+      // Shop needs road
+      if(type==='shop'||type==='restaurant'||type==='fuel'){
+        amt = hasAdjacent(r,c,'road') ? amt : amt*0.45;
+      }
+
+      // Water & desert
+      if(type!=='airport'&&type!=='statue'&&type!=='train'){
+        const water=hasWater(r,c);
+        if(t.type==='desert') amt *= water?1.0:0.35;
+        else if(water) amt*=1.12;
+        const parks=countAdjacent(r,c,'park');
+        if(parks>0) amt*=(1+Math.min(2,parks)*0.18);
+        if(HOUSE_TYPES.includes(type)){
+          const factories=countAdjacent(r,c,'factory');
+          if(factories>0) amt*=Math.max(0.35,1-factories*0.22);
+        }
+      }
+
+      // Traffic load
+      if(TRAFFIC_TYPES.includes(type)) trafficLoad++;
+      if(type==='road') trafficRelief+=0.7;
+      if(type==='train') trafficRelief+=6;
+      if(type==='police'||type==='fire') trafficRelief+=1.2;
+
+      income+=amt;
+    }
+  }
+
+  // Traffic penalty
+  const needed = Math.max(1, trafficLoad*0.55);
+  trafficPenalty = Math.max(0.35, Math.min(1, (trafficRelief+2)/needed));
+  income *= trafficPenalty;
+
+  // Education & pop bonuses
+  income *= (1 + Math.min(0.4, education*0.008));
+  // Hospital & clinic small income boost to houses already handled via presence
+
+  incomeRate=income;
+  cash+=income;
+  population=pop;
+  education=edu;
+  const newLvl=calcTownLevel(pop,edu);
+  if(newLvl>townLevel){
+    townLevel=newLvl;
+    showToast('🎉 Town Level '+townLevel+'!');
+    if(townLevel>=10 && !won){
+      won=true;
+      document.getElementById('winOverlay').style.display='flex';
+    }
+  } else townLevel=newLvl;
+
+  // UI
+  document.getElementById('townLvlEl').textContent='Town Lv '+townLevel;
+  document.getElementById('goalFill').style.width=(townLevel*10)+'%';
+  document.getElementById('goalTxt').textContent=townLevel>=10?'Level 10 Reached!':'Goal: Level 10';
+  const trEl=document.getElementById('trafficEl');
+  if(trafficPenalty<0.85){
+    trEl.textContent='🚦 Traffic -'+Math.round((1-trafficPenalty)*100)+'%';
+  } else trEl.textContent='';
+}
+
+// ===================== CLOCK =====================
+function dayPhase(){ return (totalElapsed%DAY_LENGTH)/DAY_LENGTH; }
+function dayNumber(){ return Math.floor(totalElapsed/DAY_LENGTH)+1; }
+function lightLevel(phase){ return Math.max(0,Math.sin((phase-0.25)*2*Math.PI)); }
+function phaseLabel(hour){
+  if(hour>=5&&hour<11) return ['Morning','🌅'];
+  if(hour>=11&&hour<16) return ['Afternoon','☀️'];
+  if(hour>=16&&hour<19) return ['Evening','🌇'];
+  return ['Night','🌙'];
+}
+function updateClockUI(){
+  const phase=dayPhase();
+  const hourF=phase*24;
+  const hh=Math.floor(hourF), mm=Math.floor((hourF-hh)*60);
+  const [lbl,icon]=phaseLabel(hourF);
+  document.getElementById('clockEl').textContent=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+  document.getElementById('clockIcon').textContent=icon;
+  document.getElementById('phaseEl').textContent=lbl;
+  document.getElementById('dayEl').textContent='Day '+dayNumber();
+}
+
+// ===================== UPDATE =====================
+let lastT=0, tickAcc=0;
+function update(dt){
+  totalElapsed+=dt; animTime+=dt; tickAcc+=dt;
+  if(tickAcc>=1){
+    tickAcc-=1;
+    economyTick();
+    buildToolbar();
+  }
+  updateClockUI();
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+    const t=grid[r][c];
+    if(t.pulse>0) t.pulse=Math.max(0,t.pulse-dt*2);
+    if(t.underConstruction){
+      t.buildTimer-=dt;
+      if(t.buildTimer<=0){
+        t.underConstruction=false;
+        if(!(t.building&&['airport','statue','train'].includes(t.building.type)&&!t.isAnchor)){
+          addFloater(r,c,'Ready!','#4ade80');
+        }
+      }
+    }
+  }
+  for(const f of floaters) f.t+=dt;
+  floaters=floaters.filter(f=>f.t<f.life);
+
+  // ----- Cars on roads -----
+  // Spawn cars occasionally
+  if(Math.random() < dt * 0.9 && cars.length < 18){
+    const roadTiles = [];
+    for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+      const t=grid[r][c];
+      if(t.building && !t.underConstruction && t.building.type==='road') roadTiles.push([r,c]);
+    }
+    if(roadTiles.length > 0){
+      const [sr,sc] = roadTiles[ri(0,roadTiles.length-1)];
+      const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+      const validDirs = dirs.filter(([dr,dc])=>{
+        const nr=sr+dr, nc=sc+dc;
+        return inBounds(nr,nc) && grid[nr][nc].building && grid[nr][nc].building.type==='road';
+      });
+      const dir = validDirs.length ? validDirs[ri(0,validDirs.length-1)] : dirs[ri(0,3)];
+      cars.push({
+        r: sr, c: sc, progress: 0,
+        dr: dir[0], dc: dir[1],
+        color: CAR_COLORS[ri(0,CAR_COLORS.length-1)],
+        speed: 0.7 + Math.random()*0.9
+      });
+    }
+  }
+  // Move cars
+  for(const car of cars){
+    car.progress += car.speed * dt;
+    if(car.progress >= 1){
+      car.progress = 0;
+      car.r += car.dr;
+      car.c += car.dc;
+      // try turn or continue
+      if(!inBounds(car.r,car.c) || !(grid[car.r][car.c].building && grid[car.r][car.c].building.type==='road')){
+        car.dead = true;
+      } else {
+        // maybe change direction at intersection
+        if(Math.random() < 0.35){
+          const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+          const valid = dirs.filter(([dr,dc])=>{
+            if(dr===-car.dr && dc===-car.dc) return false; // no U-turn
+            const nr=car.r+dr, nc=car.c+dc;
+            return inBounds(nr,nc) && grid[nr][nc].building && grid[nr][nc].building.type==='road';
+          });
+          if(valid.length){
+            const d = valid[ri(0,valid.length-1)];
+            car.dr = d[0]; car.dc = d[1];
+          }
+        }
+      }
+    }
+  }
+  cars = cars.filter(c => !c.dead);
+
+  document.getElementById('cashEl').textContent=Math.floor(cash).toLocaleString('en-US');
+  document.getElementById('popEl').textContent=population;
+  document.getElementById('eduEl').textContent=education;
+  document.getElementById('incomeEl').textContent='+$'+Math.round(incomeRate)+'/s';
+}
+
+// ===================== GRAPHICS =====================
+function lerpColor(c1,c2,t){
+  const a=hexToRgb(c1),b=hexToRgb(c2);
+  return `rgb(${Math.round(a[0]+(b[0]-a[0])*t)},${Math.round(a[1]+(b[1]-a[1])*t)},${Math.round(a[2]+(b[2]-a[2])*t)})`;
+}
+function hexToRgb(hex){ hex=hex.replace('#',''); return [parseInt(hex.substr(0,2),16),parseInt(hex.substr(2,2),16),parseInt(hex.substr(4,2),16)]; }
+
+function drawGrass(x,y,s,light){
+  ctx.fillStyle=lerpColor('#0d2818','#1a4a2e',light*0.5+0.4);
+  ctx.fillRect(x,y,s,s);
+  ctx.fillStyle=lerpColor('#0a1f12','#2d6b45',light*0.55+0.3);
+  for(let i=0;i<6;i++){ const px=x+((i*41+11)%(s-3))+1,py=y+((i*29+5)%(s-3))+1; ctx.fillRect(px,py,1.5,2.5); }
+}
+function drawDesert(x,y,s,light){
+  ctx.fillStyle=lerpColor('#3d2e14','#6b5428',light*0.5+0.4);
+  ctx.fillRect(x,y,s,s);
+  ctx.strokeStyle=lerpColor('#2a1f0c','#8a6e3a',light*0.5+0.3);
+  ctx.lineWidth=1;
+  for(let i=0;i<3;i++){ const yy=y+5+i*(s/4); ctx.beginPath(); ctx.moveTo(x+1,yy); ctx.quadraticCurveTo(x+s*0.4,yy-1.5,x+s-1,yy); ctx.stroke(); }
+}
+function drawRiver(x,y,s,light,time){
+  ctx.fillStyle=lerpColor('#0a2a3a','#1a5a7a',light*0.4+0.5);
+  ctx.fillRect(x,y,s,s);
+  const wave=Math.sin(time*2.2+x*0.04+y*0.03)*1.8;
+  ctx.fillStyle=lerpColor('#0d3a50','#2a7a9a',light*0.5+0.4);
+  ctx.beginPath();
+  ctx.moveTo(x,y+s*0.3+wave); ctx.quadraticCurveTo(x+s*0.3,y+s*0.2+wave,x+s*0.6,y+s*0.35+wave); ctx.quadraticCurveTo(x+s*0.85,y+s*0.42+wave,x+s,y+s*0.28+wave);
+  ctx.lineTo(x+s,y+s*0.55+wave); ctx.quadraticCurveTo(x+s*0.7,y+s*0.62+wave,x+s*0.4,y+s*0.5+wave); ctx.quadraticCurveTo(x+s*0.15,y+s*0.42+wave,x,y+s*0.55+wave);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle=`rgba(100,200,255,${0.12+light*0.18})`; ctx.fillRect(x+3,y+5+wave*0.4,s-6,2);
+}
+function drawMountain(x,y,s,light){
+  ctx.fillStyle=lerpColor('#2a2a32','#4a4a55',light*0.4+0.4);
+  ctx.fillRect(x,y,s,s);
+  ctx.fillStyle=lerpColor('#3a3a45','#6a6a75',light*0.5+0.3);
+  ctx.beginPath(); ctx.moveTo(x+1,y+s-1); ctx.lineTo(x+s*0.32,y+s*0.22); ctx.lineTo(x+s*0.52,y+s-1); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x+s*0.38,y+s-1); ctx.lineTo(x+s*0.68,y+s*0.12); ctx.lineTo(x+s-1,y+s-1); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=lerpColor('#c0c8d8','#ffffff',light*0.55+0.3);
+  ctx.beginPath(); ctx.moveTo(x+s*0.26,y+s*0.3); ctx.lineTo(x+s*0.32,y+s*0.22); ctx.lineTo(x+s*0.38,y+s*0.32); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x+s*0.6,y+s*0.22); ctx.lineTo(x+s*0.68,y+s*0.12); ctx.lineTo(x+s*0.76,y+s*0.24); ctx.closePath(); ctx.fill();
+}
+function drawRoad(x,y,s,light){
+  ctx.fillStyle=lerpColor('#2a2a30','#4a4a52',light*0.3+0.5);
+  ctx.fillRect(x+1,y+1,s-2,s-2);
+  ctx.strokeStyle=lerpColor('#8a7a30','#f0d060',light*0.5+0.4);
+  ctx.lineWidth=1.2; ctx.setLineDash([3,2.5]);
+  ctx.beginPath(); ctx.moveTo(x+s/2,y+2); ctx.lineTo(x+s/2,y+s-2); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawSimpleBuilding(x,y,s,alpha,light, bodyCol, roofCol, extras){
+  ctx.save(); ctx.globalAlpha=alpha;
+  const cx=x+s/2, cy=y+s/2;
+  ctx.fillStyle=lerpColor(bodyCol[0],bodyCol[1],light*0.4+0.5);
+  ctx.fillRect(cx-s*0.28,cy-s*0.05,s*0.56,s*0.35);
+  if(roofCol){
+    ctx.fillStyle=lerpColor(roofCol[0],roofCol[1],light*0.4+0.5);
+    ctx.beginPath(); ctx.moveTo(cx-s*0.34,cy-s*0.05); ctx.lineTo(cx,cy-s*0.32); ctx.lineTo(cx+s*0.34,cy-s*0.05); ctx.closePath(); ctx.fill();
+  }
+  if(extras) extras(cx,cy,s,light);
+  ctx.restore();
+}
+
+function drawHut(x,y,s,a,l){ drawSimpleBuilding(x,y,s,a,l,['#5a3a20','#8a5a30'],['#6a2a15','#a04a25'],(cx,cy,s,l)=>{
+  ctx.fillStyle=lerpColor('#2a1a10','#4a3020',l*0.3+0.4); ctx.fillRect(cx-s*0.07,cy+s*0.1,s*0.14,s*0.2);
+});}
+function drawHouse(x,y,s,a,l){ drawSimpleBuilding(x,y,s,a,l,['#4a5a6a','#7a8a9a'],['#5a2020','#8a3030'],(cx,cy,s,l)=>{
+  ctx.fillStyle=lerpColor('#3a2a1a','#5a4030',l*0.3+0.4); ctx.fillRect(cx-s*0.08,cy+s*0.12,s*0.16,s*0.18);
+  ctx.fillStyle=lerpColor('#4a7a90','#7ab0d0',l*0.5+0.4); ctx.fillRect(cx-s*0.24,cy+s*0.02,s*0.1,s*0.1); ctx.fillRect(cx+s*0.14,cy+s*0.02,s*0.1,s*0.1);
+});}
+function drawVilla(x,y,s,a,l){ drawSimpleBuilding(x,y,s,a,l,['#6a5a4a','#9a8a70'],['#3a4a5a','#5a6a7a'],(cx,cy,s,l)=>{
+  ctx.fillStyle=lerpColor('#8a7a6a','#c0b0a0',l*0.5+0.4); ctx.fillRect(cx-s*0.26,cy+s*0.08,s*0.07,s*0.22); ctx.fillRect(cx+s*0.19,cy+s*0.08,s*0.07,s*0.22);
+  ctx.fillStyle=lerpColor('#2a1a10','#4a3020',l*0.3+0.4); ctx.fillRect(cx-s*0.07,cy+s*0.14,s*0.14,s*0.16);
+});}
+function drawShop(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#4a3a5a','#7a5a8a',l*0.4+0.5); ctx.fillRect(cx-s*0.28,cy-s*0.08,s*0.56,s*0.4);
+  ctx.fillStyle=lerpColor('#c04030','#e06040',l*0.5+0.4); ctx.fillRect(cx-s*0.32,cy-s*0.12,s*0.64,s*0.09);
+  ctx.fillStyle=lerpColor('#2a1a30','#4a3050',l*0.3+0.4); ctx.fillRect(cx-s*0.07,cy+s*0.14,s*0.14,s*0.18);
+  ctx.restore();
+}
+function drawRestaurant(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#5a3a2a','#8a5a3a',l*0.4+0.5); ctx.fillRect(cx-s*0.28,cy-s*0.06,s*0.56,s*0.38);
+  ctx.fillStyle=lerpColor('#c06020','#e08030',l*0.5+0.4); ctx.fillRect(cx-s*0.3,cy-s*0.14,s*0.6,s*0.1);
+  ctx.fillStyle='#f0e0c0'; ctx.font=`bold ${s*0.14}px sans-serif`; ctx.textAlign='center'; ctx.fillText('🍽️',cx,cy+s*0.12);
+  ctx.restore();
+}
+function drawFuel(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#3a3a42','#5a5a65',l*0.3+0.5); ctx.fillRect(cx-s*0.26,cy-s*0.1,s*0.52,s*0.42);
+  ctx.fillStyle=lerpColor('#c04020','#e06030',l*0.5+0.4); ctx.fillRect(cx-s*0.2,cy-s*0.22,s*0.4,s*0.12);
+  ctx.fillStyle='#f0d060'; ctx.font=`${s*0.2}px sans-serif`; ctx.textAlign='center'; ctx.fillText('⛽',cx,cy+s*0.12);
+  ctx.restore();
+}
+function drawFactory(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#3a3a42','#5a5a65',l*0.3+0.5); ctx.fillRect(cx-s*0.3,cy-s*0.02,s*0.6,s*0.36);
+  ctx.fillStyle=lerpColor('#2a2a32','#4a4a52',l*0.3+0.5); ctx.fillRect(cx-s*0.2,cy-s*0.28,s*0.09,s*0.28); ctx.fillRect(cx+s*0.08,cy-s*0.34,s*0.11,s*0.34);
+  const smoke=Math.sin(animTime*1.4)*1.5;
+  ctx.fillStyle=`rgba(120,120,130,${0.28+l*0.15})`;
+  ctx.beginPath(); ctx.ellipse(cx-s*0.15,cy-s*0.34+smoke,4,3,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+s*0.13,cy-s*0.4+smoke*1.1,5,4,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+function drawOffice(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#3a4a5a','#5a6a7a',l*0.4+0.5); ctx.fillRect(cx-s*0.26,cy-s*0.28,s*0.52,s*0.58);
+  ctx.fillStyle=lerpColor('#5a90b0','#8ad0f0',l*0.5+0.4);
+  for(let i=0;i<3;i++) for(let j=0;j<3;j++) ctx.fillRect(cx-s*0.2+j*s*0.14,cy-s*0.22+i*s*0.14,s*0.08,s*0.08);
+  ctx.restore();
+}
+function drawBank(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#4a4a3a','#6a6a5a',l*0.4+0.5); ctx.fillRect(cx-s*0.28,cy-s*0.05,s*0.56,s*0.38);
+  ctx.fillStyle=lerpColor('#8a8a6a','#c0c0a0',l*0.5+0.4);
+  for(let i=0;i<3;i++) ctx.fillRect(cx-s*0.22+i*s*0.16,cy+s*0.05,s*0.06,s*0.28);
+  ctx.fillStyle=lerpColor('#3a3a2a','#5a5a4a',l*0.4+0.5);
+  ctx.beginPath(); ctx.moveTo(cx-s*0.32,cy-s*0.05); ctx.lineTo(cx,cy-s*0.28); ctx.lineTo(cx+s*0.32,cy-s*0.05); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function drawSchool(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#3a5a4a','#5a8a6a',l*0.4+0.5); ctx.fillRect(cx-s*0.28,cy-s*0.08,s*0.56,s*0.4);
+  ctx.fillStyle=lerpColor('#c04030','#e06040',l*0.5+0.4); ctx.fillRect(cx-s*0.08,cy-s*0.28,s*0.16,s*0.22);
+  ctx.fillStyle='#f0d060'; ctx.font=`${s*0.18}px sans-serif`; ctx.textAlign='center'; ctx.fillText('📚',cx,cy+s*0.12);
+  ctx.restore();
+}
+function drawHighSchool(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#2a4a5a','#4a7a8a',l*0.4+0.5); ctx.fillRect(cx-s*0.3,cy-s*0.12,s*0.6,s*0.44);
+  ctx.fillStyle=lerpColor('#c04030','#e06040',l*0.5+0.4); ctx.fillRect(cx-s*0.1,cy-s*0.32,s*0.2,s*0.22);
+  ctx.fillStyle='#f0d060'; ctx.font=`${s*0.16}px sans-serif`; ctx.textAlign='center'; ctx.fillText('🎓',cx,cy+s*0.1);
+  ctx.restore();
+}
+function drawUniversity(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#3a3a5a','#5a5a7a',l*0.4+0.5); ctx.fillRect(cx-s*0.32,cy-s*0.05,s*0.64,s*0.4);
+  ctx.fillStyle=lerpColor('#8a8a9a','#c0c0d0',l*0.5+0.4);
+  for(let i=0;i<4;i++) ctx.fillRect(cx-s*0.26+i*s*0.14,cy+s*0.05,s*0.06,s*0.3);
+  ctx.fillStyle=lerpColor('#2a2a4a','#4a4a6a',l*0.4+0.5);
+  ctx.beginPath(); ctx.moveTo(cx-s*0.36,cy-s*0.05); ctx.lineTo(cx,cy-s*0.32); ctx.lineTo(cx+s*0.36,cy-s*0.05); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function drawClinic(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#e0e8f0','#f0f5fa',l*0.4+0.5); ctx.fillRect(cx-s*0.26,cy-s*0.1,s*0.52,s*0.42);
+  ctx.fillStyle='#e04040'; ctx.fillRect(cx-s*0.04,cy-s*0.02,s*0.08,s*0.2); ctx.fillRect(cx-s*0.1,cy+s*0.04,s*0.2,s*0.08);
+  ctx.restore();
+}
+function drawHospital(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#d0d8e0','#e8f0f8',l*0.4+0.5); ctx.fillRect(cx-s*0.3,cy-s*0.2,s*0.6,s*0.52);
+  ctx.fillStyle='#e04040'; ctx.fillRect(cx-s*0.05,cy-s*0.08,s*0.1,s*0.26); ctx.fillRect(cx-s*0.13,cy,s*0.26,s*0.1);
+  ctx.restore();
+}
+function drawPolice(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#2a3a5a','#3a5a8a',l*0.4+0.5); ctx.fillRect(cx-s*0.28,cy-s*0.08,s*0.56,s*0.4);
+  ctx.fillStyle='#f0d060'; ctx.font=`${s*0.22}px sans-serif`; ctx.textAlign='center'; ctx.fillText('🚓',cx,cy+s*0.1);
+  ctx.restore();
+}
+function drawFire(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#5a2a2a','#8a3a3a',l*0.4+0.5); ctx.fillRect(cx-s*0.28,cy-s*0.08,s*0.56,s*0.4);
+  ctx.fillStyle='#f0d060'; ctx.font=`${s*0.22}px sans-serif`; ctx.textAlign='center'; ctx.fillText('🚒',cx,cy+s*0.1);
+  ctx.restore();
+}
+function drawGraveyard(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#2a3a2a','#3a5a3a',l*0.3+0.5); ctx.fillRect(x+1,y+1,s-2,s-2);
+  ctx.fillStyle=lerpColor('#5a5a5a','#8a8a8a',l*0.4+0.4);
+  ctx.fillRect(cx-s*0.18,cy-s*0.05,s*0.08,s*0.22); ctx.fillRect(cx-s*0.22,cy-s*0.08,s*0.16,s*0.05);
+  ctx.fillRect(cx+s*0.08,cy+s*0.05,s*0.07,s*0.18); ctx.fillRect(cx+s*0.05,cy+s*0.02,s*0.14,s*0.05);
+  ctx.restore();
+}
+function drawPark(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#2a4a20','#4a7a35',l*0.4+0.5);
+  ctx.beginPath(); ctx.arc(cx-s*0.15,cy-s*0.05,s*0.14,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx+s*0.12,cy,s*0.12,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=lerpColor('#3a2a10','#5a4020',l*0.3+0.5);
+  ctx.fillRect(cx-s*0.17,cy+s*0.05,s*0.04,s*0.12); ctx.fillRect(cx+s*0.1,cy+s*0.08,s*0.035,s*0.1);
+  ctx.restore();
+}
+function drawHotel(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#5a3a5a','#8a5a8a',l*0.4+0.5); ctx.fillRect(cx-s*0.26,cy-s*0.25,s*0.52,s*0.55);
+  ctx.fillStyle=lerpColor('#5a90b0','#8ad0f0',l*0.5+0.4);
+  for(let i=0;i<3;i++) for(let j=0;j<2;j++) ctx.fillRect(cx-s*0.18+j*s*0.2,cy-s*0.18+i*s*0.14,s*0.1,s*0.08);
+  ctx.restore();
+}
+function drawTownHall(x,y,s,a,l){
+  ctx.save(); ctx.globalAlpha=a; const cx=x+s/2,cy=y+s/2;
+  ctx.fillStyle=lerpColor('#4a4a5a','#7a7a8a',l*0.4+0.5); ctx.fillRect(cx-s*0.3,cy,s*0.6,s*0.35);
+  ctx.fillStyle=lerpColor('#8a8a9a','#c0c0d0',l*0.5+0.4);
+  for(let i=0;i<3;i++) ctx.fillRect(cx-s*0.24+i*s*0.18,cy+s*0.05,s*0.06,s*0.25);
+  ctx.fillStyle=lerpColor('#3a3a4a','#5a5a6a',l*0.4+0.5);
+  ctx.beginPath(); ctx.moveTo(cx-s*0.34,cy); ctx.lineTo(cx,cy-s*0.26); ctx.lineTo(cx+s*0.34,cy); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#e04040'; ctx.fillRect(cx-1,cy-s*0.38,2,s*0.14);
+  ctx.beginPath(); ctx.moveTo(cx+1,cy-s*0.38); ctx.lineTo(cx+s*0.12,cy-s*0.32); ctx.lineTo(cx+1,cy-s*0.26); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+function drawBig(x,y,s,a,l,type){
+  ctx.save(); ctx.globalAlpha=a;
+  const size=s*2;
+  if(type==='airport'){
+    ctx.fillStyle=lerpColor('#3a3a42','#5a5a65',l*0.3+0.5); ctx.fillRect(x+2,y+2,size-4,size-4);
+    ctx.fillStyle=lerpColor('#2a2a32','#4a4a52',l*0.3+0.5); ctx.fillRect(x+size*0.12,y+size*0.38,size*0.76,size*0.22);
+    ctx.strokeStyle='#f0d060'; ctx.lineWidth=1.5; ctx.setLineDash([5,3]);
+    ctx.beginPath(); ctx.moveTo(x+size*0.18,y+size*0.49); ctx.lineTo(x+size*0.82,y+size*0.49); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=lerpColor('#4a5a6a','#6a7a8a',l*0.4+0.5); ctx.fillRect(x+size*0.08,y+size*0.08,size*0.32,size*0.22);
+    ctx.fillStyle=lerpColor('#c0c8d0','#e8f0f8',l*0.5+0.4);
+    ctx.beginPath(); ctx.ellipse(x+size*0.55,y+size*0.72,size*0.16,size*0.05,0,0,Math.PI*2); ctx.fill();
+  } else if(type==='statue'){
+    ctx.fillStyle=lerpColor('#3a4a3a','#5a6a5a',l*0.3+0.5); ctx.fillRect(x+2,y+2,size-4,size-4);
+    ctx.fillStyle=lerpColor('#6a6a7a','#9a9aaa',l*0.5+0.4);
+    ctx.fillRect(x+size*0.35,y+size*0.45,size*0.3,size*0.4);
+    ctx.beginPath(); ctx.arc(x+size*0.5,y+size*0.32,size*0.18,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#f0d060'; ctx.font=`${size*0.2}px sans-serif`; ctx.textAlign='center'; ctx.fillText('🗽',x+size*0.5,y+size*0.38);
+  } else if(type==='train'){
+    ctx.fillStyle=lerpColor('#3a3a42','#5a5a65',l*0.3+0.5); ctx.fillRect(x+2,y+2,size-4,size-4);
+    ctx.fillStyle=lerpColor('#2a2a32','#4a4a52',l*0.3+0.5); ctx.fillRect(x+size*0.1,y+size*0.55,size*0.8,size*0.18);
+    ctx.fillStyle=lerpColor('#4a5a6a','#6a7a8a',l*0.4+0.5); ctx.fillRect(x+size*0.15,y+size*0.15,size*0.7,size*0.35);
+    ctx.fillStyle='#f0d060'; ctx.font=`${size*0.22}px sans-serif`; ctx.textAlign='center'; ctx.fillText('🚉',x+size*0.5,y+size*0.38);
+  }
+  ctx.restore();
+}
+
+function drawProgressBar(x,y,w,h,pct){
+  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle='#facc15'; ctx.fillRect(x,y,w*Math.max(0,Math.min(1,pct)),h);
+}
+
+function draw(){
+  const phase=dayPhase(), light=lightLevel(phase);
+  const skyTop=lerpColor('#050a14','#1a4a8a',light);
+  const skyBot=lerpColor('#0a1020','#3a7ab0',light);
+  const grd=ctx.createLinearGradient(0,0,0,H);
+  grd.addColorStop(0,skyTop); grd.addColorStop(1,skyBot);
+  ctx.fillStyle=grd; ctx.fillRect(0,0,W,H);
+  if(light>0.3){ ctx.fillStyle=`rgba(255,220,120,${(light-0.3)*0.12})`; ctx.beginPath(); ctx.arc(W*0.7,H*0.12,W*0.22,0,Math.PI*2); ctx.fill(); }
+
+  for(let r=0;r<GRID;r++){
+    for(let c=0;c<GRID;c++){
+      const t=grid[r][c];
+      const x=c*tile, y=r*tile;
+      const buyable=!t.owned&&isBuyable(r,c);
+      const pad=1.2;
+
+      if(t.type==='mountain') drawMountain(x+pad,y+pad,tile-pad*2,light);
+      else if(t.type==='river') drawRiver(x+pad,y+pad,tile-pad*2,light,animTime);
+      else if(t.type==='desert') drawDesert(x+pad,y+pad,tile-pad*2,light);
+      else drawGrass(x+pad,y+pad,tile-pad*2,light);
+
+      if(!t.owned&&t.type==='plain'&&!buyable){ ctx.fillStyle='rgba(5,8,15,0.5)'; ctx.fillRect(x+pad,y+pad,tile-pad*2,tile-pad*2); }
+      if(t.owned){ ctx.strokeStyle='rgba(74,222,128,0.25)'; ctx.lineWidth=1.2; ctx.strokeRect(x+pad+0.5,y+pad+0.5,tile-pad*2-1,tile-pad*2-1); }
+      if(t.pulse>0){ ctx.fillStyle=`rgba(74,222,128,${t.pulse*0.3})`; ctx.fillRect(x+pad,y+pad,tile-pad*2,tile-pad*2); }
+
+      if(t.building){
+        const alpha=t.underConstruction?0.42:1;
+        const type=t.building.type;
+        if(['airport','statue','train'].includes(type)){
+          if(t.isAnchor){
+            drawBig(x,y,tile,alpha,light,type);
+            if(t.underConstruction){
+              const def=BUILD[type];
+              drawProgressBar(x+5,y+tile*2-11,tile*2-10,5,1-t.buildTimer/def.buildT);
+            }
+          }
+        } else if(type==='road') drawRoad(x+pad,y+pad,tile-pad*2,light);
+        else if(type==='hut') drawHut(x,y,tile,alpha,light);
+        else if(type==='house') drawHouse(x,y,tile,alpha,light);
+        else if(type==='villa') drawVilla(x,y,tile,alpha,light);
+        else if(type==='shop') drawShop(x,y,tile,alpha,light);
+        else if(type==='restaurant') drawRestaurant(x,y,tile,alpha,light);
+        else if(type==='fuel') drawFuel(x,y,tile,alpha,light);
+        else if(type==='factory') drawFactory(x,y,tile,alpha,light);
+        else if(type==='office') drawOffice(x,y,tile,alpha,light);
+        else if(type==='bank') drawBank(x,y,tile,alpha,light);
+        else if(type==='school') drawSchool(x,y,tile,alpha,light);
+        else if(type==='highschool') drawHighSchool(x,y,tile,alpha,light);
+        else if(type==='university') drawUniversity(x,y,tile,alpha,light);
+        else if(type==='clinic') drawClinic(x,y,tile,alpha,light);
+        else if(type==='hospital') drawHospital(x,y,tile,alpha,light);
+        else if(type==='police') drawPolice(x,y,tile,alpha,light);
+        else if(type==='fire') drawFire(x,y,tile,alpha,light);
+        else if(type==='graveyard') drawGraveyard(x,y,tile,alpha,light);
+        else if(type==='park') drawPark(x,y,tile,alpha,light);
+        else if(type==='hotel') drawHotel(x,y,tile,alpha,light);
+        else if(type==='townhall') drawTownHall(x,y,tile,alpha,light);
+
+        if(t.underConstruction && !['airport','statue','train'].includes(type)){
+          const def=BUILD[type];
+          drawProgressBar(x+4,y+tile-9,tile-8,4,1-t.buildTimer/def.buildT);
+        }
+      } else if(buyable){
+        ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.roundRect(x+tile*0.12,y+tile*0.7,tile*0.76,tile*0.2,3); ctx.fill();
+        ctx.fillStyle='#fbbf24'; ctx.font=`bold ${tile*0.14}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('$'+landCost(r,c),x+tile/2,y+tile*0.8);
+      } else if(!t.owned&&t.type==='plain'){
+        ctx.fillStyle='rgba(255,255,255,0.07)'; ctx.font=`${tile*0.2}px sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('🔒',x+tile/2,y+tile/2);
+      }
+    }
+  }
+
+  // Draw moving cars
+  for(const car of cars){
+    const px = (car.c + car.dc * car.progress) * tile + tile/2;
+    const py = (car.r + car.dr * car.progress) * tile + tile/2;
+    const cw = tile * 0.28;
+    const ch = tile * 0.16;
+    ctx.save();
+    ctx.translate(px, py);
+    // rotate based on direction
+    if(car.dr === 0 && car.dc === 1) ctx.rotate(0);
+    else if(car.dr === 0 && car.dc === -1) ctx.rotate(Math.PI);
+    else if(car.dr === 1 && car.dc === 0) ctx.rotate(Math.PI/2);
+    else ctx.rotate(-Math.PI/2);
+    // car body
+    ctx.fillStyle = car.color;
+    ctx.fillRect(-cw/2, -ch/2, cw, ch);
+    // windows
+    ctx.fillStyle = 'rgba(200,230,255,0.7)';
+    ctx.fillRect(-cw*0.15, -ch*0.35, cw*0.35, ch*0.7);
+    // headlights
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(cw/2-2, -ch*0.3, 3, ch*0.25);
+    ctx.fillRect(cw/2-2, ch*0.05, 3, ch*0.25);
+    ctx.restore();
+  }
+
+  if(light<0.5){ const d=(0.5-light)*2*0.48; ctx.fillStyle=`rgba(2,6,20,${d})`; ctx.fillRect(0,0,W,H); }
+
+  for(const f of floaters){
+    const a=1-f.t/f.life;
+    ctx.globalAlpha=a; ctx.fillStyle=f.color;
+    ctx.font=`bold ${tile*0.18}px sans-serif`; ctx.textAlign='center';
+    ctx.fillText(f.text,f.c*tile+tile/2,f.r*tile+tile*0.28-f.t*20);
+  }
+  ctx.globalAlpha=1;
+}
+
+function loop(ts){
+  if(!lastT) lastT=ts;
+  let dt=(ts-lastT)/1000; lastT=ts; dt=Math.min(dt,0.05);
+  if(running&&!paused) update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ===================== OVERLAYS =====================
+const startOverlay=document.getElementById('startOverlay');
+const howtoOverlay=document.getElementById('howtoOverlay');
+const pauseOverlay=document.getElementById('pauseOverlay');
+const winOverlay=document.getElementById('winOverlay');
+let howtoReturnsTo='start';
+
+function startGame(){
+  resetGame(); resize(); buildToolbar(); closeSheet();
+  document.getElementById('fabBadge').textContent=TOOL_META.buy.icon;
+  startOverlay.style.display='none'; pauseOverlay.style.display='none'; winOverlay.style.display='none';
+  updateClockUI();
+}
+document.getElementById('playBtn').addEventListener('click',startGame);
+document.getElementById('howtoBtnStart').addEventListener('click',()=>{ howtoReturnsTo='start'; startOverlay.style.display='none'; howtoOverlay.style.display='flex'; });
+document.getElementById('howtoBtnPause').addEventListener('click',()=>{ howtoReturnsTo='pause'; pauseOverlay.style.display='none'; howtoOverlay.style.display='flex'; });
+document.getElementById('howtoCloseBtn').addEventListener('click',()=>{
+  howtoOverlay.style.display='none';
+  if(howtoReturnsTo==='start') startOverlay.style.display='flex'; else pauseOverlay.style.display='flex';
+});
+document.getElementById('pauseBtn').addEventListener('click',()=>{ if(!running) return; paused=true; closeSheet(); pauseOverlay.style.display='flex'; });
+document.getElementById('resumeBtn').addEventListener('click',()=>{ paused=false; pauseOverlay.style.display='none'; });
+document.getElementById('restartBtn').addEventListener('click',()=>{ pauseOverlay.style.display='none'; startGame(); });
+document.getElementById('quitBtn').addEventListener('click',()=>{ running=false; paused=false; pauseOverlay.style.display='none'; startOverlay.style.display='flex'; });
+document.getElementById('winContinue').addEventListener('click',()=>{ winOverlay.style.display='none'; });
+document.getElementById('winNew').addEventListener('click',()=>{ winOverlay.style.display='none'; startGame(); });
+
+// Init
+resetGame(); running=false; resize(); buildToolbar(); draw(); updateClockUI();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
