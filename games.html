@@ -44,7 +44,7 @@
           <div class="game-info">
             <h3>MY CITY</h3>
             <p>Build your town to Level 10! Schools, offices, traffic, tourism &amp; more.</p>
-            <button class="btn btn-small" onclick="playGame('my-city.html')">Play Now</button>
+            <button class="btn btn-small" onclick="playGame('games/my-city/index.html')">Play Now</button>
           </div>
         </div>
 
@@ -82,4 +82,55 @@
         <div class="game-card">
           <div class="game-img">
             <img src="https://placehold.co/400x225/1a160f/e85d04?text=Shadow+Blade" alt="Shadow Blade">
-            <span class="badge paid
+            <span class="badge paid">$9.99</span>
+          </div>
+          <div class="game-info">
+            <h3>Shadow Blade</h3>
+            <p>Action-packed ninja platformer with fluid combat.</p>
+            <a href="#" class="btn btn-small">Buy Now</a>
+          </div>
+        </div>
+
+        <div class="game-card">
+          <div class="game-img">
+            <img src="https://placehold.co/400x225/1a160f/e85d04?text=Neon+Racers" alt="Neon Racers">
+            <span class="badge paid">$14.99</span>
+          </div>
+          <div class="game-info">
+            <h3>Neon Racers</h3>
+            <p>High-speed cyberpunk racing with online multiplayer.</p>
+            <a href="#" class="btn btn-small">Buy Now</a>
+          </div>
+        </div>
+
+        <div class="game-card">
+          <div class="game-img">
+            <img src="https://placehold.co/400x225/1a160f/e85d04?text=Forge+Quest" alt="Forge Quest">
+            <span class="badge paid">$19.99</span>
+          </div>
+          <div class="game-info">
+            <h3>Forge Quest</h3>
+            <p>Epic RPG adventure with deep crafting and story.</p>
+            <a href="#" class="btn btn-small">Buy Now</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Game Player Modal: opens in-page when "Play Now" is clicked -->
+  <div id="gameModal" class="modal">
+    <span class="modal-close" onclick="closeGame()">✖</span>
+    <iframe id="gameFrame" src=""></iframe>
+  </div>
+
+  <footer>
+    <div class="container">
+      <p>© 2026 Neo Forge Games. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
+        
