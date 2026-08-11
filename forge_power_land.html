@@ -1,0 +1,3181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FORGE POWER LAND</title>
+<style>
+  :root{
+    --bg1:#0a1628; --bg2:#061018;
+    --panel:#122038; --panel2:#1a2e4a;
+    --ink:#f0f6ff; --muted:#8aa0c0;
+    --gold:#ffd34e; --green:#3dde7a; --red:#ff6b6b; --blue:#4ec5ff; --purple:#c89cff;
+    --hud-bg: linear-gradient(180deg, rgba(12,28,52,0.95) 0%, rgba(8,18,36,0.92) 100%);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+  input, textarea{user-select:text; -webkit-user-select:text;}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#000;
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:var(--ink);touch-action:none;}
+  #stage{position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 0%,#182238 0%,#04060c 75%);}
+  /* Primary layout: Landscape horizontal */
+  #frame{
+    position:relative;
+    width: min(100vw, 1200px);
+    height: min(100vh, 680px);
+    max-height: 100vh;
+    display:flex;
+    flex-direction: row;
+    background: #0a101c;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.55);
+  }
+  @media (orientation: portrait) and (max-aspect-ratio: 1/1) {
+    #frame{
+      width: min(100vw, 520px);
+      height: min(100vh, 960px);
+      flex-direction: column;
+    }
+    #sidePanel{ width:100% !important; max-height:36%; border-left:none !important; border-top:1px solid rgba(255,255,255,0.08); }
+    #mainArea{ flex:1; min-height:0; }
+    .rotate-hint{ display:flex !important; }
+  }
+  .rotate-hint{
+    display:none; position:absolute; top:6px; left:50%; transform:translateX(-50%);
+    background:rgba(251,191,36,0.18); border:1px solid rgba(251,191,36,0.45);
+    color:var(--gold); font-size:10px; padding:3px 12px; border-radius:12px; z-index:40;
+    pointer-events:none;
+  }
+  #mainArea{ flex:1; min-width:0; display:flex; flex-direction:column; position:relative; }
+  #sidePanel{
+    width: 252px; flex-shrink:0;
+    background: linear-gradient(180deg, #122038 0%, #0a1428 50%, #081020 100%);
+    border-left: 1px solid rgba(255,200,80,0.12);
+    display:flex; flex-direction:column; overflow:hidden; z-index:10;
+    box-shadow: -6px 0 20px rgba(0,0,0,0.35);
+  }
+
+  .hud{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:6px 10px; background:var(--hud-bg);
+    z-index:6; flex-shrink:0; gap:8px;
+    border-bottom:1px solid rgba(255,200,80,0.12);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  }
+  .hud-col{display:flex; flex-direction:row; align-items:center; gap:8px; flex-wrap:wrap;}
+  .stat{
+    display:flex;align-items:center;gap:4px;font-size:12px;font-weight:800;
+    background:rgba(0,0,0,0.28); padding:3px 8px; border-radius:14px;
+    border:1px solid rgba(255,255,255,0.08);
+  }
+  .stat .ic{font-size:13px;}
+  .cash{color:var(--gold);}
+  .pop{color:var(--blue);}
+  .edu{color:var(--purple);}
+  .income{color:var(--green); font-size:11px; font-weight:700;
+    background:rgba(61,222,122,0.12); padding:3px 8px; border-radius:12px;}
+  .traffic{color:var(--red); font-size:10px; font-weight:700;}
+  .clock{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:800;
+    background:rgba(0,0,0,0.25); padding:3px 8px; border-radius:12px;}
+  .phase{font-size:9px;color:var(--muted);}
+  .dayLbl{font-size:9px;color:var(--muted);}
+  .townLvl{font-size:11px;font-weight:900;color:#1a1200;background:linear-gradient(135deg,#ffd34e,#f5a623);
+    padding:3px 10px;border-radius:12px;border:none; box-shadow:0 2px 8px rgba(255,180,40,0.35);}
+  .pauseBtn{
+    background:linear-gradient(180deg, #2a4060 0%, #1a2a40 100%);
+    border:1px solid rgba(255,255,255,0.18);
+    width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-size:14px; cursor:pointer; flex-shrink:0;
+    box-shadow:0 2px 6px rgba(0,0,0,0.3);
+  }
+  .pauseBtn:active{ transform:scale(0.94); }
+  .hud-right{display:flex; align-items:center; gap:5px;}
+
+  #gameWrap{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center; background:radial-gradient(ellipse at 50% 60%, #0a2848 0%, #041018 70%);}
+  canvas{display:block;touch-action:none; border-radius:6px; box-shadow:0 4px 20px rgba(0,0,0,0.45);}
+
+  /* Side panel sections */
+  .sp-profile{ padding:10px 12px 8px; border-bottom:1px solid rgba(255,255,255,0.07); }
+  .sp-name{ font-size:14px; font-weight:800; color:var(--gold); letter-spacing:0.3px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sp-lvl{ font-size:11px; color:var(--muted); margin-bottom:6px; }
+  .sp-stats{ display:flex; gap:8px; flex-wrap:wrap; }
+  .sp-stat{ font-size:11px; font-weight:700; }
+  .sp-stat.cash{ color:var(--gold); } .sp-stat.pop{ color:var(--blue); }
+  .sp-stat.edu{ color:var(--purple); } .sp-stat.inc{ color:var(--green); }
+
+  .sp-section-title{ font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; font-weight:700; padding:0 2px; }
+  .sp-missions{ flex:0 1 auto; max-height:28%; overflow-y:auto; padding:6px 8px 4px; min-height:0; }
+  .mission-item{
+    background: var(--panel2); border-radius:8px; padding:6px 8px; margin-bottom:5px;
+    font-size:10.5px; line-height:1.35; border-left:3px solid transparent; color: var(--muted);
+  }
+  .mission-item.current{ border-left-color: var(--blue); background:#1a2a45; color:var(--ink); }
+  .mission-item.done{ border-left-color: var(--green); opacity:0.55; text-decoration: line-through; }
+  .mission-item .m-num{ font-weight:800; color:var(--gold); margin-right:4px; }
+
+  .sp-reviews{ flex:1; overflow-y:auto; padding:4px 8px 6px; min-height:60px; border-top:1px solid rgba(255,255,255,0.07); }
+  .review-item{
+    background: rgba(26,42,70,0.9); border-radius:10px; padding:7px 9px; margin-bottom:6px;
+    font-size:10.5px; line-height:1.4; border:1px solid rgba(255,255,255,0.06);
+  }
+  .review-item .rev-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; }
+  .review-item .rev-name{ font-weight:800; color:#c8e0ff; font-size:11px; }
+  .review-item .rev-stars{ color:#fbbf24; letter-spacing:1px; font-size:10px; }
+  .review-item .rev-body{ color:#9ab0cc; font-size:10px; }
+  .review-item.good{ border-left:3px solid #4ade80; }
+  .review-item.mid{ border-left:3px solid #fbbf24; }
+  .review-item.bad{ border-left:3px solid #f87171; }
+  .hap-bar-wrap{ padding:4px 10px 6px; }
+  .hap-label{ font-size:9px; color:var(--muted); margin-bottom:3px; display:flex; justify-content:space-between; }
+  .hap-bar{ height:6px; background:rgba(255,255,255,0.08); border-radius:4px; overflow:hidden; }
+  .hap-fill{ height:100%; border-radius:4px; transition:width 0.4s, background 0.4s; }
+
+  .sp-tools{ padding:6px 8px 10px; flex-shrink:0; max-height:44%; overflow-y:auto; border-top:1px solid rgba(255,255,255,0.07); }
+  .sp-tools .tool-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:5px; }
+  .sp-tools .tool{ padding:6px 2px; border-radius:9px; }
+  .sp-tools .tool .ic{ font-size:15px; }
+  .sp-tools .tool .lbl{ font-size:8px; }
+  .sp-tools .tool .cost{ font-size:7.5px; }
+
+  .toast{
+    position:absolute; top:6px; left:50%; transform:translateX(-50%);
+    background:rgba(10,14,23,0.94); border:1px solid rgba(255,255,255,0.15);
+    padding:6px 14px; border-radius:18px; font-size:11px; letter-spacing:0.3px;
+    z-index:20; opacity:0; transition:opacity 0.25s, transform 0.25s; pointer-events:none;
+    white-space:nowrap; max-width:90%; text-align:center;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(3px); }
+
+  /* buildFab removed — tools now live in side panel */
+
+  .sheet{
+    position:absolute; inset:0; z-index:25; display:none;
+    align-items:flex-end; justify-content:center;
+    background:rgba(4,6,12,0.55);
+  }
+  .sheet.open{ display:flex; }
+  .sheet-card{
+    width:100%; max-height:78%; background:var(--panel); border-radius:18px 18px 0 0;
+    padding:12px 10px calc(12px + env(safe-area-inset-bottom)) 10px; overflow-y:auto;
+    border-top:1px solid rgba(255,255,255,0.1);
+  }
+  .sheet-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding:0 4px;}
+  .sheet-head h3{ margin:0; font-size:14px; letter-spacing:0.4px; }
+  .sheet-close{ background:rgba(255,255,255,0.08); border:none; color:var(--ink); width:26px;height:26px;
+    border-radius:7px; font-size:13px; cursor:pointer; }
+  .tool-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .tool{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    background: linear-gradient(180deg, #243a58 0%, #1a2c44 100%);
+    border:1.5px solid rgba(255,255,255,0.1); border-radius:12px;
+    padding:8px 3px; cursor:pointer; color:var(--ink);
+    min-height: 54px;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.08s, box-shadow 0.15s;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+  .tool:active{ transform: scale(0.93); }
+  .tool .ic{font-size:18px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));}
+  .tool .lbl{font-size:8.5px; letter-spacing:0.1px; color:#d0e0f8; font-weight:700;}
+  .tool .cost{font-size:8px; color:var(--gold); font-weight:800;}
+  .tool.active{
+    border-color: #4ec5ff; background: linear-gradient(180deg, #2a5080 0%, #1e3a5c 100%);
+    box-shadow:0 0 14px rgba(78,197,255,0.4), inset 0 0 0 1px rgba(78,197,255,0.3);
+  }
+  .tool.locked{ opacity:0.36; filter:grayscale(0.4); }
+
+  .overlay{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(5,7,16,0.93); backdrop-filter:blur(6px); z-index:30; text-align:center; padding:22px;
+  }
+  .overlay h1{ font-size:24px; margin:0 0 5px 0; letter-spacing:1px;
+    background:linear-gradient(90deg,#fbbf24,#4ade80); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .overlay .sub{ color:var(--muted); font-size:12px; margin-bottom:16px; line-height:1.65; max-width:310px;}
+  .overlay .sub b{ color:var(--ink); }
+  .play-btn{ background:linear-gradient(135deg,#4ade80,#22d3ee); color:#031018; border:none; font-weight:800;
+    font-size:14px; padding:12px 28px; border-radius:24px; cursor:pointer; box-shadow:0 0 22px rgba(74,222,128,0.3); margin:4px;}
+  .play-btn:active{ transform:scale(0.96); }
+  .ghost-btn{
+    background:transparent; border:1.5px solid rgba(255,255,255,0.25); color:var(--ink);
+    font-weight:700; font-size:12px; padding:10px 22px; border-radius:20px; cursor:pointer; margin:4px;
+  }
+  .ghost-btn:active{ transform:scale(0.96); }
+  .howto-body{ text-align:left; max-width:330px; font-size:11.5px; color:var(--muted); line-height:1.75; max-height:50vh; overflow-y:auto; margin-bottom:12px;}
+  .howto-body b{ color:var(--ink); }
+  .howto-body .sec{ color:var(--gold); font-weight:700; margin-top:8px; display:block; }
+  .btnrow{ display:flex; flex-wrap:wrap; justify-content:center; }
+  .goal-bar{
+    width:90%; max-width:280px; height:10px; background:rgba(255,255,255,0.1); border-radius:6px;
+    margin:8px auto 4px; overflow:hidden;
+  }
+  .goal-fill{ height:100%; background:linear-gradient(90deg,#fbbf24,#4ade80); border-radius:6px; transition:width 0.4s; }
+  .goal-txt{ font-size:11px; color:var(--muted); }
+
+  /* ===== Theme title screens (pure CSS, no loading, no external image needed) ===== */
+  .theme-overlay{
+    background: transparent !important;
+    backdrop-filter: none !important;
+    justify-content: center !important;
+    padding: 20px 14px max(20px, env(safe-area-inset-bottom)) !important;
+    overflow: hidden;
+  }
+  /* Sky + mountains gradient scene */
+  .theme-overlay::before{
+    content:''; position:absolute; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 42%, rgba(255,180,60,0.55) 0%, transparent 55%),
+      linear-gradient(180deg,
+        #1a2744 0%,
+        #3a4a6a 18%,
+        #c4783a 38%,
+        #e8a040 48%,
+        #5a6a3a 52%,
+        #2a4a28 68%,
+        #1a3020 85%,
+        #0c1410 100%);
+  }
+  /* Mountain silhouettes */
+  .theme-overlay::after{
+    content:''; position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:
+      linear-gradient(165deg, transparent 40%, #2a3548 40.5%, #2a3548 47%, transparent 47.5%) left 10% top 28% / 55% 40% no-repeat,
+      linear-gradient(195deg, transparent 38%, #1e2a3c 38.5%, #1e2a3c 50%, transparent 50.5%) right 5% top 22% / 50% 45% no-repeat,
+      linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.35) 100%);
+  }
+  .theme-overlay > *{ position:relative; z-index:2; }
+  .theme-brand{
+    text-align:center; margin-bottom: 14px; width:100%; max-width: min(360px, 94vw);
+  }
+  .theme-brand .studio{
+    font-size: 10px; letter-spacing: 3.5px; color: rgba(251,191,36,0.9);
+    font-weight: 700; margin-bottom: 6px; text-transform: uppercase;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  .theme-brand .logo{
+    font-size: clamp(26px, 8vw, 38px); font-weight: 900; letter-spacing: 1.5px;
+    line-height: 1.15; margin: 0;
+    background: linear-gradient(180deg, #fef3c7 0%, #fbbf24 35%, #d97706 70%, #92400e 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 3px 2px rgba(0,0,0,0.55)) drop-shadow(0 0 18px rgba(251,191,36,0.35));
+  }
+  .theme-brand .tagline{
+    font-size: 11px; color: rgba(254,243,199,0.75); margin-top: 8px;
+    letter-spacing: 0.3px; line-height: 1.5;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  }
+  .theme-card{
+    background: rgba(8,12,22,0.78);
+    border: 1px solid rgba(251,191,36,0.4);
+    border-radius: 16px;
+    padding: 16px 14px 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 28px rgba(251,191,36,0.08), inset 0 1px 0 rgba(255,255,255,0.06);
+    max-width: min(300px, 90vw);
+    width: 100%;
+    backdrop-filter: blur(12px);
+  }
+  .theme-card input{
+    background: rgba(6,10,20,0.92) !important;
+    border: 1.5px solid rgba(251,191,36,0.45) !important;
+    color: #eaf1ff !important;
+    padding: 11px 14px !important;
+    border-radius: 11px !important;
+    font-size: 15px !important;
+    width: 100% !important;
+    text-align: center !important;
+    outline: none !important;
+    margin-bottom: 12px !important;
+  }
+  .theme-card input:focus{
+    border-color: #fbbf24 !important;
+    box-shadow: 0 0 0 3px rgba(251,191,36,0.2);
+  }
+  .theme-card .sub{
+    color: rgba(234,241,255,0.82) !important;
+    margin: 0 0 12px !important;
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+  }
+  .theme-card .card-label{
+    font-size: 11px; letter-spacing: 1.5px; color: #fbbf24;
+    text-transform: uppercase; margin-bottom: 8px; font-weight: 700;
+  }
+  .theme-footer{
+    position: absolute; bottom: 12px; left: 0; right: 0; z-index: 3;
+    text-align: center; font-size: 10px; letter-spacing: 1.5px;
+    color: rgba(254,243,199,0.55); pointer-events: none;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  }
+  @media (orientation: landscape) and (max-height: 480px) {
+    .theme-brand .logo{ font-size: 22px; }
+    .theme-brand{ margin-bottom: 8px; }
+    .theme-card{ padding: 10px 12px; }
+    .theme-footer{ bottom: 6px; font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+<div id="stage"><div id="frame">
+  <div class="rotate-hint">↻ Rotate phone for best experience</div>
+
+  <div id="mainArea">
+    <div class="hud">
+      <div class="hud-col">
+        <div class="stat cash"><span class="ic">$</span><span id="cashEl">0</span></div>
+        <div class="stat pop"><span class="ic">👥</span><span id="popEl">0</span></div>
+        <div class="stat edu"><span class="ic">📚</span><span id="eduEl">0</span></div>
+        <div class="income" id="incomeEl">+$0/s</div>
+        <div class="traffic" id="trafficEl"></div>
+      </div>
+      <div class="hud-col">
+        <div class="townLvl" id="townLvlEl">Town Lv 1</div>
+        <div class="goal-bar" style="width:90px;height:6px;margin:0;"><div class="goal-fill" id="goalFill" style="width:10%"></div></div>
+      </div>
+      <div class="hud-right">
+        <div class="clock"><span id="clockIcon">☀️</span><span id="clockEl">06:00</span></div>
+        <div class="phase" id="phaseEl">Morning</div>
+        <div class="dayLbl" id="dayEl">Day 1</div>
+        <div class="dayLbl" id="weatherEl" style="color:#38bdf8;">☀️ Clear</div>
+        <div class="pauseBtn" id="musicBtn" title="Music">🎵</div>
+        <div class="pauseBtn" id="pauseBtn">⏸</div>
+      </div>
+    </div>
+
+    <div id="gameWrap">
+      <canvas id="game"></canvas>
+      <div class="toast" id="toast"></div>
+    </div>
+  </div>
+
+  <div id="sidePanel">
+    <div class="sp-profile">
+      <div class="sp-name" id="spName">Player</div>
+      <div class="sp-lvl" id="spLvl">Village • Level 1</div>
+      <div class="sp-stats">
+        <span class="sp-stat cash" id="spCash">$0</span>
+        <span class="sp-stat pop" id="spPop">👥 0</span>
+        <span class="sp-stat edu" id="spEdu">📚 0</span>
+        <span class="sp-stat inc" id="spInc">+$0/s</span>
+      </div>
+    </div>
+    <div class="sp-section-title" style="padding:8px 10px 0;">Missions</div>
+    <div class="sp-missions" id="missionList"></div>
+    <div class="sp-section-title" style="padding:6px 10px 0;">Citizen Reviews</div>
+    <div class="hap-bar-wrap">
+      <div class="hap-label"><span>Happiness</span><span id="hapTxt">100%</span></div>
+      <div class="hap-bar"><div class="hap-fill" id="hapFill" style="width:100%;background:#4ade80;"></div></div>
+    </div>
+    <div class="sp-reviews" id="reviewList"></div>
+    <div class="sp-tools">
+      <div class="sp-section-title">Build Tools</div>
+      <div class="tool-grid" id="toolGrid"></div>
+    </div>
+  </div>
+
+  <!-- Keep sheet for portrait fallback if needed -->
+  <div class="sheet" id="sheet">
+    <div class="sheet-card">
+      <div class="sheet-head">
+        <h3>Choose a tool</h3>
+        <button class="sheet-close" id="sheetClose">✕</button>
+      </div>
+      <div class="tool-grid" id="toolGridSheet"></div>
+    </div>
+  </div>
+
+  <!-- Profile screen -->
+  <div class="overlay theme-overlay" id="profileOverlay" style="display:none;">
+    <div class="theme-brand">
+      <div class="studio">NEO FORGE GAMES</div>
+      <h1 class="logo">FORGE POWER LAND</h1>
+      <div class="tagline">Build from Village to Power Land</div>
+    </div>
+    <div class="theme-card">
+      <div class="card-label">Create Profile</div>
+      <div class="sub">Enter your name to begin the journey.<br>It will appear in missions and city reports.</div>
+      <input id="nameInput" type="text" maxlength="16" placeholder="Enter your name..." autocomplete="off" />
+      <div class="btnrow">
+        <button class="play-btn" id="createProfileBtn">CREATE PROFILE</button>
+      </div>
+    </div>
+    <div class="theme-footer">MADE BY NEO FORGE GAMES</div>
+  </div>
+
+  <!-- Start screen -->
+  <div class="overlay theme-overlay" id="startOverlay" style="display:none;">
+    <div class="theme-brand">
+      <div class="studio">NEO FORGE GAMES PRESENTS</div>
+      <h1 class="logo">FORGE POWER LAND</h1>
+      <div class="tagline">Complete missions • Unlock industry • Manage crime</div>
+    </div>
+    <div class="theme-card">
+      <div class="sub" id="startWelcome">Build from Village to Power Land.<br>Ready to forge your city?</div>
+      <div class="btnrow">
+        <button class="play-btn" id="playBtn">ENTER THE LAND</button>
+        <button class="ghost-btn" id="howtoBtnStart">How to Play</button>
+      </div>
+    </div>
+    <div class="theme-footer">MADE BY NEO FORGE GAMES</div>
+  </div>
+
+<div class="overlay" id="howtoOverlay" style="display:none;">
+    <h1 style="font-size:20px;">How to Play</h1>
+    <div class="howto-body">
+      <span class="sec">Goal</span>
+      Grow from <b>Village</b> to <b>Power Land</b> (Level 10). Complete missions to progress.
+      <span class="sec">Profile</span>
+      Enter your name at the start. Missions will address you personally.
+      <span class="sec">Island &amp; Ocean</span>
+      You are on a large island. The outer edge is deep ocean — you cannot buy or build there.
+      <span class="sec">Land</span>
+      Buy land next to owned tiles on the island. Price rises with distance from Town Hall. Mountains can be bought for mines.
+      <span class="sec">Terrain Rules</span>
+      <b>Oil Refinery</b> — only on Desert. <b>Ore Mine</b> — only on Mountains. Rivers cannot be built on.
+      <span class="sec">Industry Limits</span>
+      Early levels limit how many factories/mines you can build. Limits rise as your city ranks up.
+      <span class="sec">Crime &amp; Safety</span>
+      High population without enough Police/Fire raises crime and cuts income. Watch the demand messages.
+      <span class="sec">Education</span>
+      Schools, Library, High School, University and Museum raise Education and unlock advanced buildings.
+      <span class="sec">Roads (Critical)</span>
+      Factories, shops, offices and most buildings earn <b>nothing</b> without a road next to them.
+      Road types: Small Road → 2-Way → Highway → Flyover (better traffic capacity).
+      <span class="sec">Traffic</span>
+      Too many houses and shops without enough roads or a Train Station reduces income.
+      <span class="sec">Big Buildings</span>
+      Airport, Statue and Train Station need 2×2 empty owned land.
+    </div>
+    <button class="play-btn" id="howtoCloseBtn">Got it</button>
+  </div>
+
+  <div class="overlay" id="pauseOverlay" style="display:none;">
+    <h1 style="font-size:22px;">Paused</h1>
+    <div class="sub">Your land awaits your command.</div>
+    <div class="btnrow">
+      <button class="play-btn" id="resumeBtn">Resume</button>
+      <button class="ghost-btn" id="howtoBtnPause">How to Play</button>
+      <button class="ghost-btn" id="restartBtn">New City</button>
+      <button class="ghost-btn" id="quitBtn" style="border-color:rgba(248,113,113,0.4); color:#f87171;">Quit</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="winOverlay" style="display:none;">
+    <h1>🎉 Town Level 10!</h1>
+    <div class="sub">Congratulations! You forged a powerful land.</div>
+    <div class="btnrow">
+      <button class="play-btn" id="winContinue">Keep Playing</button>
+      <button class="ghost-btn" id="winNew">New City</button>
+    </div>
+  </div>
+
+</div></div>
+
+<script>
+(function(){
+"use strict";
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const gameWrap = document.getElementById('gameWrap');
+let DPR = Math.min(window.devicePixelRatio||1, 2);
+let W, H, tile;
+
+const GRID = 16;
+const CENTER = 7;
+
+const DAY_LENGTH = 1800;
+
+// ===================== ISOMETRIC ENGINE =====================
+let isoTW = 48, isoTH = 24; // tile half-width / half-height (set in resize)
+let isoOriginX = 0, isoOriginY = 0;
+let camShake = 0;
+
+function isoToScreen(r, c, z=0){
+  // classic isometric: x right-down, y left-down
+  const x = isoOriginX + (c - r) * isoTW;
+  const y = isoOriginY + (c + r) * isoTH - z;
+  return {x, y};
+}
+function screenToIso(sx, sy){
+  // inverse (ignore z for picking)
+  const dx = sx - isoOriginX;
+  const dy = sy - isoOriginY;
+  // c - r = dx / isoTW
+  // c + r = dy / isoTH
+  const c = (dx / isoTW + dy / isoTH) / 2;
+  const r = (dy / isoTH - dx / isoTW) / 2;
+  return {r: Math.floor(r + 0.5), c: Math.floor(c + 0.5)};
+}
+
+// Building visual heights (in pixels of vertical extrusion)
+const BUILD_H = {
+  hut:18, house:28, villa:34, apartment:72, shop:24, cafe:22, restaurant:24, fuel:20,
+  cinema:40, factory:38, warehouse:30, oil:42, mine:24, office:64, bank:40,
+  school:30, library:32, highschool:36, university:54, museum:40,
+  clinic:24, hospital:46, police:28, fire:28, graveyard:10, road:0, road2:0, highway:0, flyover:8, park:0, playground:6,
+  hotel:60, townhall:44, train:30, statue:52, airport:28
+};
+
+// ===================== BACKGROUND MUSIC (Web Audio ambient city) =====================
+let audioCtx = null, musicNodes = [], musicOn = false, musicGain = null;
+let musicMasterTarget = 0.5;
+let musicFilter = null, musicPadG = null, musicShimG = null;
+
+function initMusic(){
+  if(audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    musicGain = audioCtx.createGain();
+    musicGain.gain.value = 0.0;
+
+    // Soft lowpass so it feels warm, not harsh
+    musicFilter = audioCtx.createBiquadFilter();
+    musicFilter.type = 'lowpass';
+    musicFilter.frequency.value = 1400;
+    musicFilter.Q.value = 0.6;
+    musicFilter.connect(musicGain);
+    musicGain.connect(audioCtx.destination);
+
+    // Deep root pad (A1)
+    const pad = audioCtx.createOscillator();
+    pad.type = 'sine';
+    pad.frequency.value = 55;
+    musicPadG = audioCtx.createGain();
+    musicPadG.gain.value = 0.14;
+    pad.connect(musicPadG); musicPadG.connect(musicFilter);
+    pad.start();
+
+    // Fifth (E2)
+    const pad2 = audioCtx.createOscillator();
+    pad2.type = 'sine';
+    pad2.frequency.value = 82.41;
+    const pad2G = audioCtx.createGain();
+    pad2G.gain.value = 0.08;
+    pad2.connect(pad2G); pad2G.connect(musicFilter);
+    pad2.start();
+
+    // Octave (A2) very soft
+    const pad3 = audioCtx.createOscillator();
+    pad3.type = 'triangle';
+    pad3.frequency.value = 110;
+    const pad3G = audioCtx.createGain();
+    pad3G.gain.value = 0.035;
+    pad3.connect(pad3G); pad3G.connect(musicFilter);
+    pad3.start();
+
+    // High shimmer with slow LFO
+    const shim = audioCtx.createOscillator();
+    shim.type = 'sine';
+    shim.frequency.value = 329.63; // E4
+    musicShimG = audioCtx.createGain();
+    musicShimG.gain.value = 0.018;
+    const lfo = audioCtx.createOscillator();
+    lfo.frequency.value = 0.07;
+    const lfoG = audioCtx.createGain();
+    lfoG.gain.value = 0.012;
+    lfo.connect(lfoG); lfoG.connect(musicShimG.gain);
+    shim.connect(musicShimG); musicShimG.connect(musicFilter);
+    shim.start(); lfo.start();
+
+    // Soft secondary shimmer
+    const shim2 = audioCtx.createOscillator();
+    shim2.type = 'triangle';
+    shim2.frequency.value = 440;
+    const shim2G = audioCtx.createGain();
+    shim2G.gain.value = 0.01;
+    const lfo2 = audioCtx.createOscillator();
+    lfo2.frequency.value = 0.11;
+    const lfo2G = audioCtx.createGain();
+    lfo2G.gain.value = 0.008;
+    lfo2.connect(lfo2G); lfo2G.connect(shim2G.gain);
+    shim2.connect(shim2G); shim2G.connect(musicFilter);
+    shim2.start(); lfo2.start();
+
+    // City heartbeat pulse
+    const pulse = audioCtx.createOscillator();
+    pulse.type = 'sine';
+    pulse.frequency.value = 110;
+    const pulseG = audioCtx.createGain();
+    pulseG.gain.value = 0;
+    pulse.connect(pulseG); pulseG.connect(musicFilter);
+    pulse.start();
+    setInterval(()=>{
+      if(!musicOn || !audioCtx) return;
+      const t = audioCtx.currentTime;
+      pulseG.gain.cancelScheduledValues(t);
+      pulseG.gain.setValueAtTime(0, t);
+      pulseG.gain.linearRampToValueAtTime(0.035, t + 0.12);
+      pulseG.gain.linearRampToValueAtTime(0, t + 0.9);
+    }, 3600);
+
+    musicNodes = [pad, pad2, pad3, shim, lfo, shim2, lfo2, pulse];
+  } catch(e){ console.warn('Audio init failed', e); }
+}
+
+function startMusic(){
+  initMusic();
+  if(!audioCtx || !musicGain) return;
+  if(audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+  musicOn = true;
+  const t = audioCtx.currentTime;
+  musicGain.gain.cancelScheduledValues(t);
+  musicGain.gain.setValueAtTime(musicGain.gain.value, t);
+  musicGain.gain.linearRampToValueAtTime(musicMasterTarget, t + 2.2);
+  const btn = document.getElementById('musicBtn');
+  if(btn) btn.textContent = '🎵';
+}
+
+function stopMusic(){
+  if(!musicGain || !audioCtx) return;
+  musicOn = false;
+  const t = audioCtx.currentTime;
+  musicGain.gain.cancelScheduledValues(t);
+  musicGain.gain.setValueAtTime(musicGain.gain.value, t);
+  musicGain.gain.linearRampToValueAtTime(0, t + 1.0);
+  const btn = document.getElementById('musicBtn');
+  if(btn) btn.textContent = '🔇';
+}
+
+function toggleMusic(){
+  if(musicOn) stopMusic(); else startMusic();
+}
+
+// Day/night music colour: darker filter + slightly quieter at night
+function updateMusicMood(light){
+  if(!audioCtx || !musicFilter || !musicOn) return;
+  const t = audioCtx.currentTime;
+  // Night: warmer, darker, a bit quieter
+  const freq = 900 + light * 900; // 900 night .. 1800 day
+  const vol = musicMasterTarget * (0.72 + light * 0.28);
+  try {
+    musicFilter.frequency.setTargetAtTime(freq, t, 1.5);
+    musicGain.gain.setTargetAtTime(vol, t, 1.2);
+  } catch(e){}
+}
+
+
+
+
+function resize(){
+  const rect = gameWrap.getBoundingClientRect();
+  W = Math.max(200, rect.width - 4);
+  H = Math.max(200, rect.height - 4);
+  canvas.width = W * DPR; canvas.height = H * DPR;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // Fit full GRID diamond into view with padding
+  // Grid iso width  = (GRID-1) * isoTW * 2 roughly from leftmost to rightmost
+  // Grid iso height = (GRID-1) * isoTH * 2
+  const pad = 0.12;
+  const availW = W * (1 - pad);
+  const availH = H * (1 - pad * 1.4);
+  // width span for GRID: from (0,GRID-1) to (GRID-1,0) => 2*(GRID-1)*isoTW
+  // height span: from (0,0) to (GRID-1,GRID-1) => 2*(GRID-1)*isoTH + max building height
+  const maxBH = 70; // approx max building visual height
+  const twByW = availW / (2 * (GRID - 1) + 2);
+  const twByH = (availH - maxBH) / ((GRID - 1) + 1);
+  isoTW = Math.floor(Math.min(twByW, twByH * 2));
+  isoTW = Math.max(16, Math.min(52, isoTW));
+  isoTH = Math.max(8, Math.floor(isoTW * 0.5));
+  tile = isoTW;
+  // Center: origin is where (0,0) top of diamond sits
+  // Center of grid in iso space is at r=c=(GRID-1)/2
+  const mid = (GRID - 1) / 2;
+  isoOriginX = W / 2;
+  // Place vertical center of map in lower-middle of canvas so tall buildings fit
+  isoOriginY = H * 0.22 - mid * isoTH * 0.15;
+}
+window.addEventListener('resize', resize);
+
+// ===================== BUILDINGS =====================
+const BUILD = {
+  // Housing
+  hut:        { icon:'🛖', label:'Hut',          cost:60,   income:0.8,  cap:2,  edu:0,  buildT:1.5, unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  house:      { icon:'🏠', label:'House',        cost:140,  income:1.8,  cap:4,  edu:0,  buildT:2.5, unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  villa:      { icon:'🏡', label:'Villa',        cost:380,  income:4.5,  cap:7,  edu:0,  buildT:4,   unlockEdu:0,  unlockPop:12, unlockTown:2 },
+  apartment:  { icon:'🏢', label:'Apartment',    cost:520,  income:6.5,  cap:12, edu:0,  buildT:5,   unlockEdu:0,  unlockPop:20, unlockTown:3 },
+  // Commerce
+  shop:       { icon:'🏪', label:'Shop',         cost:260,  income:5,    cap:0,  edu:0,  buildT:3,   unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  cafe:       { icon:'☕', label:'Cafe',         cost:290,  income:5.8,  cap:0,  edu:0,  buildT:3,   unlockEdu:0,  unlockPop:6,  unlockTown:2 },
+  restaurant: { icon:'🍽️', label:'Restaurant',   cost:320,  income:6.5,  cap:0,  edu:0,  buildT:3.5, unlockEdu:0,  unlockPop:8,  unlockTown:2 },
+  fuel:       { icon:'⛽', label:'Fuel Station', cost:280,  income:5.5,  cap:0,  edu:0,  buildT:3,   unlockEdu:0,  unlockPop:5,  unlockTown:2 },
+  cinema:     { icon:'🎬', label:'Cinema',       cost:720,  income:14,   cap:0,  edu:0,  buildT:5.5, unlockEdu:5,  unlockPop:22, unlockTown:3 },
+  // Industry & Jobs
+  factory:    { icon:'🏭', label:'Factory',      cost:480,  income:12,   cap:0,  edu:0,  buildT:4.5, unlockEdu:0,  unlockPop:0,  unlockTown:2 },
+  warehouse:  { icon:'📦', label:'Warehouse',    cost:420,  income:9,    cap:0,  edu:0,  buildT:4,   unlockEdu:0,  unlockPop:10, unlockTown:2 },
+  oil:        { icon:'🛢️', label:'Oil Refinery', cost:900,  income:22,   cap:0,  edu:0,  buildT:6,   unlockEdu:0,  unlockPop:15, unlockTown:3, terrain:'desert' },
+  mine:       { icon:'⛏️', label:'Ore Mine',     cost:750,  income:18,   cap:0,  edu:0,  buildT:5.5, unlockEdu:0,  unlockPop:12, unlockTown:3, terrain:'mountain' },
+  office:     { icon:'🏢', label:'Office',       cost:550,  income:11,   cap:0,  edu:0,  buildT:5,   unlockEdu:5,  unlockPop:15, unlockTown:3 },
+  bank:       { icon:'🏦', label:'Bank',         cost:700,  income:16,   cap:0,  edu:0,  buildT:5,   unlockEdu:10, unlockPop:25, unlockTown:4 },
+  // Education
+  school:     { icon:'🏫', label:'School',       cost:350,  income:1,    cap:0,  edu:3,  buildT:4,   unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  library:    { icon:'📚', label:'Library',      cost:480,  income:1.5,  cap:0,  edu:6,  buildT:4.5, unlockEdu:4,  unlockPop:12, unlockTown:2 },
+  highschool: { icon:'🎓', label:'High School',  cost:600,  income:2,    cap:0,  edu:7,  buildT:5,   unlockEdu:8,  unlockPop:20, unlockTown:3 },
+  university: { icon:'🏛️', label:'University',  cost:1100, income:4,    cap:0,  edu:15, buildT:7,   unlockEdu:18, unlockPop:40, unlockTown:5 },
+  museum:     { icon:'🖼️', label:'Museum',       cost:850,  income:8,    cap:0,  edu:5,  buildT:6,   unlockEdu:12, unlockPop:28, unlockTown:4 },
+  // Health & Safety
+  clinic:     { icon:'🏥', label:'Clinic',       cost:300,  income:2,    cap:0,  edu:0,  buildT:3,   unlockEdu:0,  unlockPop:5,  unlockTown:2 },
+  hospital:   { icon:'🏨', label:'Hospital',     cost:800,  income:5,    cap:0,  edu:0,  buildT:6,   unlockEdu:12, unlockPop:30, unlockTown:4 },
+  police:     { icon:'🚓', label:'Police',       cost:400,  income:2.5,  cap:0,  edu:0,  buildT:4,   unlockEdu:0,  unlockPop:10, unlockTown:2 },
+  fire:       { icon:'🚒', label:'Fire Station', cost:420,  income:2.5,  cap:0,  edu:0,  buildT:4,   unlockEdu:0,  unlockPop:12, unlockTown:3 },
+  graveyard:  { icon:'🪦', label:'Graveyard',    cost:180,  income:0.5,  cap:0,  edu:0,  buildT:2,   unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  // Transport
+  road:       { icon:'🛣️', label:'Small Road',   cost:18,   income:0,    cap:0,  edu:0,  buildT:0.35, unlockEdu:0,  unlockPop:0,  unlockTown:1, roadTier:1 },
+  road2:      { icon:'🛤️', label:'2-Way Road',   cost:45,   income:0,    cap:0,  edu:0,  buildT:0.5, unlockEdu:0,  unlockPop:8,  unlockTown:2, roadTier:2 },
+  highway:    { icon:'🚙', label:'Highway',      cost:120,  income:0,    cap:0,  edu:0,  buildT:0.8, unlockEdu:0,  unlockPop:20, unlockTown:3, roadTier:3 },
+  flyover:    { icon:'🌉', label:'Flyover',      cost:280,  income:0,    cap:0,  edu:0,  buildT:1.5, unlockEdu:0,  unlockPop:35, unlockTown:4, roadTier:4 },
+
+  train:      { icon:'🚉', label:'Train Station',cost:900,  income:8,    cap:0,  edu:0,  buildT:6,   unlockEdu:5,  unlockPop:20, unlockTown:3, size:2 },
+  // Tourism
+  hotel:      { icon:'🏩', label:'Hotel',        cost:650,  income:10,   cap:0,  edu:0,  buildT:5,   unlockEdu:0,  unlockPop:18, unlockTown:3 },
+  statue:     { icon:'🗽', label:'Statue Unity', cost:1500, income:25,   cap:0,  edu:0,  buildT:8,   unlockEdu:0,  unlockPop:35, unlockTown:4, size:2 },
+  // Big
+  airport:    { icon:'✈️', label:'Airport',      cost:1400, income:40,   cap:0,  edu:0,  buildT:8,   unlockEdu:10, unlockPop:45, unlockTown:5, size:2 },
+  // Parks & Hall
+  park:       { icon:'🌳', label:'Park',         cost:100,  income:0,    cap:0,  edu:0,  buildT:1.5, unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  playground: { icon:'🎠', label:'Playground',   cost:160,  income:0.5,  cap:0,  edu:0,  buildT:2,   unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+  townhall:   { icon:'🏛️', label:'Town Hall',    cost:0,    income:4,    cap:0,  edu:0,  buildT:0,   unlockEdu:0,  unlockPop:0,  unlockTown:1 },
+};
+
+const HOUSE_TYPES = ['hut','house','villa','apartment'];
+const TRAFFIC_TYPES = ['hut','house','villa','apartment','restaurant','fuel','cafe','cinema'];
+
+// ===================== STATE =====================
+let grid, cash, population, education, incomeRate, trafficPenalty, townLevel, floaters, running, paused, won;
+let totalElapsed = 0, animTime = 0, tool = 'buy';
+// Weather system
+let weather = 'clear'; // clear | cloudy | rain | storm
+let weatherTimer = 0;
+let weatherDuration = 90; // seconds until next change
+let rainDrops = [];
+// ===== GLOBAL PARTICLE SYSTEM (smoke, dust, sparks, fireflies, construction) =====
+let particles = [];
+const MAX_PARTICLES = 280;
+function spawnParticle(x, y, type, opts={}){
+  if(particles.length >= MAX_PARTICLES){
+    // recycle oldest soft particle
+    for(let i=0;i<particles.length;i++){
+      if(particles[i].life < 0.3){ particles.splice(i,1); break; }
+    }
+    if(particles.length >= MAX_PARTICLES) return;
+  }
+  const p = {
+    x, y, type,
+    vx: opts.vx !== undefined ? opts.vx : (Math.random()-0.5)*20,
+    vy: opts.vy !== undefined ? opts.vy : -20 - Math.random()*40,
+    life: opts.life || (0.8 + Math.random()*1.2),
+    maxLife: opts.life || (0.8 + Math.random()*1.2),
+    size: opts.size || (2 + Math.random()*4),
+    color: opts.color || '#aaa',
+    rot: Math.random()*Math.PI*2,
+    rotV: (Math.random()-0.5)*4,
+    gravity: opts.gravity !== undefined ? opts.gravity : 30,
+    fade: opts.fade !== undefined ? opts.fade : true
+  };
+  particles.push(p);
+}
+function updateParticles(dt){
+  for(let i=particles.length-1;i>=0;i--){
+    const p = particles[i];
+    p.life -= dt;
+    if(p.life <= 0){ particles.splice(i,1); continue; }
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += p.gravity * dt;
+    p.rot += p.rotV * dt;
+    if(p.type === 'smoke'){ p.vx *= 0.98; p.size += dt*3; }
+    if(p.type === 'firefly'){ p.vx += (Math.random()-0.5)*40*dt; p.vy += (Math.random()-0.5)*40*dt; p.vy *= 0.9; }
+  }
+}
+function drawParticles(ctx){
+  for(const p of particles){
+    const a = p.fade ? Math.max(0, p.life / p.maxLife) : 1;
+    ctx.save();
+    ctx.globalAlpha = a * (p.type==='firefly' ? 0.85 : 0.55);
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    if(p.type === 'smoke'){
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.ellipse(0,0, p.size, p.size*0.7, 0, 0, Math.PI*2);
+      ctx.fill();
+    } else if(p.type === 'spark' || p.type === 'dust'){
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+    } else if(p.type === 'firefly'){
+      const g = ctx.createRadialGradient(0,0,0,0,0,p.size*2);
+      g.addColorStop(0, p.color);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0,0,p.size*2,0,Math.PI*2); ctx.fill();
+    } else if(p.type === 'leaf'){
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.ellipse(0,0, p.size, p.size*0.45, 0, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(0,0,p.size,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+const WEATHER_TYPES = ['clear','cloudy','rain','storm'];
+const WEATHER_LABELS = { clear:'☀️ Clear', cloudy:'☁️ Cloudy', rain:'🌧️ Rain', storm:'⛈️ Storm' };
+let cars = [];
+let cats = [];
+let pedestrians = [];
+let missionIndex = 0;
+let playerName = localStorage.getItem('fpl_playerName') || 'Mayor';
+let crime = 0;
+let happiness = 100;
+let reviews = [];
+let reviewTimer = 0;
+const NPC_NAMES = ['Aarav','Priya','Rohan','Meera','Kabir','Ananya','Vikram','Sneha','Arjun','Isha','Dev','Neha','Karan','Pooja','Aditya','Riya','Siddharth','Kavya','Rahul','Diya'];
+const REVIEW_GOOD = [
+  'Love living here! Parks are beautiful.',
+  'Great schools — my kids are happy.',
+  'This city feels safe and clean.',
+  'Best mayor ever. Keep it up!',
+  'Roads are smooth, traffic is fine.',
+  'The river view from my house is amazing.',
+  'Finally a proper hospital nearby!',
+  'Nightlife and shops are perfect.',
+  'Fresh air and green spaces — 10/10.',
+  'Proud to call this island home.'
+];
+const REVIEW_MID = [
+  'Not bad, but we need more parks.',
+  'Traffic is getting a bit heavy.',
+  'Could use another school soon.',
+  'Rent is okay, services are average.',
+  'Island is nice but jobs are limited.',
+  'Police presence feels low sometimes.',
+  'Need better public transport.',
+  'Decent place, room to improve.'
+];
+const REVIEW_BAD = [
+  'Crime is scary — please build police!',
+  'Traffic is horrible. Need roads!',
+  'No good schools for my children.',
+  'This place feels neglected.',
+  'Pollution from factories is bad.',
+  "I might move if things don't improve.",
+  'Streets feel unsafe at night.',
+  'Where are the parks and clinics?'
+];
+
+let demandPolice = false, demandTraffic = false;
+
+const LEVEL_NAMES = [
+  '', 'Village', 'Small Town', 'Town', 'Growing City', 'City',
+  'Large City', 'Metropolis', 'Capital', 'Megacity', 'Power Land'
+];
+
+const LEVEL_LIMITS = {
+  // max factories / warehouses / oil / mines per town level
+  factory:  [0,0,1,2,4,8,12,16,20,24,30],
+  warehouse:[0,0,1,2,3,6,10,14,18,22,28],
+  oil:      [0,0,0,1,2,3,5,7,9,12,15],
+  mine:     [0,0,0,1,2,3,5,7,9,12,15],
+  airport:  [0,0,0,0,0,1,1,1,2,2,2],
+  statue:   [0,0,0,0,1,1,1,2,2,2,3],
+  train:    [0,0,0,1,1,2,2,2,3,3,3],
+};
+
+function maxFactories(){
+  // Use LEVEL_LIMITS for factory+warehouse+oil+mine combined soft cap
+  const lvl = Math.min(10, Math.max(1, townLevel));
+  return (LEVEL_LIMITS.factory[lvl]||0) + (LEVEL_LIMITS.warehouse[lvl]||0) + (LEVEL_LIMITS.oil[lvl]||0) + (LEVEL_LIMITS.mine[lvl]||0) || 1;
+}
+function maxBigBuildings(){
+  const lvl = Math.min(10, Math.max(1, townLevel));
+  return (LEVEL_LIMITS.airport[lvl]||0) + (LEVEL_LIMITS.statue[lvl]||0) + (LEVEL_LIMITS.train[lvl]||0) + 4;
+}
+const MISSIONS = [
+  { text: () => `${playerName}, buy 4 land tiles to expand your Village`, check: () => { let n=0; for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++) if(grid[r][c].owned) n++; return n>=5; } },
+  { text: () => `${playerName}, build 3 homes for your people`, check: () => countType('hut')+countType('house')+countType('villa')+countType('apartment') >= 3 },
+  { text: () => `Connect the Village — place 6 roads`, check: () => countRoads() >= 6 },
+  { text: () => `Open a School so education can grow`, check: () => countType('school') >= 1 },
+  { text: () => `Reach Town status (Level 3)`, check: () => townLevel >= 3 },
+  { text: () => `Build your first Factory or Warehouse`, check: () => countType('factory')+countType('warehouse') >= 1 },
+  { text: () => `Create green space — 2 Parks or Playgrounds`, check: () => countType('park')+countType('playground') >= 2 },
+  { text: () => `Reach City status (Level 5)`, check: () => townLevel >= 5 },
+  { text: () => `Build a Hotel or Cinema for tourism`, check: () => countType('hotel')+countType('cinema') >= 1 },
+  { text: () => `Extract resources — build an Oil Refinery (Desert) or Ore Mine (Mountain)`, check: () => countType('oil')+countType('mine') >= 1 },
+  { text: () => `Keep the peace — build a Police Station`, check: () => countType('police') >= 1 },
+  { text: () => `Reach Metropolis (Level 7)`, check: () => townLevel >= 7 },
+  { text: () => `Build a University or Museum`, check: () => countType('university')+countType('museum') >= 1 },
+  { text: () => `Reach Megacity (Level 9)`, check: () => townLevel >= 9 },
+  { text: () => `Claim the ultimate title — reach Power Land (Level 10)!`, check: () => townLevel >= 10 },
+];
+const CAR_COLORS = ['#ef4444','#3b82f6','#22c55e','#f59e0b','#a855f7','#ec4899','#14b8a6','#f97316','#e11d48','#0ea5e9','#84cc16','#eab308','#8b5cf6','#f43f5e','#06b6d4','#65a30d','#d97706','#7c3aed','#db2777','#0891b2','#ca8a04','#4f46e5','#be123c','#0284c7','#16a34a','#c026d3'];
+const CAT_COLORS = ['#f5a623','#e8e8e8','#4a3728','#c0c0c0','#f0c080','#2c2c2c','#d4a574'];
+
+function rnd(a,b){ return a + Math.random()*(b-a); }
+function ri(a,b){ return Math.floor(rnd(a,b+1)); }
+function inBounds(r,c){ return r>=0 && r<GRID && c>=0 && c<GRID; }
+function dist(r,c){ return Math.abs(r-CENTER) + Math.abs(c-CENTER); }
+
+function generateTerrain(g){
+  // Main river snaking through island (not on outer ocean later)
+  let col = ri(3, GRID-4);
+  for(let r=1;r<GRID-1;r++){
+    if(!(r===CENTER && Math.abs(col-CENTER)<=1)) {
+      if(g[r][col]) g[r][col].type = 'river';
+      // sometimes widen river
+      if(Math.random()<0.35 && col+1<GRID-1) g[r][col+1].type = 'river';
+      if(Math.random()<0.2 && col-1>0) g[r][col-1].type = 'river';
+    }
+    if(Math.random()<0.55) col += (Math.random()<0.5?-1:1);
+    col = Math.max(2, Math.min(GRID-3, col));
+  }
+  // Secondary smaller stream
+  if(Math.random()<0.7){
+    let c2 = ri(2, GRID-3);
+    let r2 = ri(2, GRID-3);
+    for(let i=0;i<ri(4,8);i++){
+      if(inBounds(r2,c2) && dist(r2,c2)>=3) g[r2][c2].type='river';
+      r2 += ri(-1,1); c2 += ri(-1,1);
+      r2 = Math.max(1, Math.min(GRID-2, r2));
+      c2 = Math.max(1, Math.min(GRID-2, c2));
+    }
+  }
+  // Mountains
+  const blobs = ri(2,4);
+  for(let b=0;b<blobs;b++){
+    let tries=0, or_, oc_;
+    do{ or_=ri(2,GRID-3); oc_=ri(2,GRID-3); tries++; } while(dist(or_,oc_)<4 && tries<50);
+    const seeds=[[or_,oc_]];
+    for(let i=0;i<ri(5,10);i++){
+      const [pr,pc]=seeds[ri(0,seeds.length-1)];
+      const nr=pr+ri(-1,1), nc=pc+ri(-1,1);
+      if(inBounds(nr,nc) && dist(nr,nc)>=4 && g[nr][nc].type==='plain'){
+        g[nr][nc].type='mountain'; seeds.push([nr,nc]);
+      }
+    }
+  }
+  // Desert
+  {
+    let tries=0, or_, oc_;
+    do{ or_=ri(2,GRID-3); oc_=ri(2,GRID-3); tries++; } while(dist(or_,oc_)<4 && tries<50);
+    const seeds=[[or_,oc_]];
+    if(g[or_][oc_].type==='plain') g[or_][oc_].type='desert';
+    for(let i=0;i<ri(6,12);i++){
+      const [pr,pc]=seeds[ri(0,seeds.length-1)];
+      const nr=pr+ri(-1,1), nc=pc+ri(-1,1);
+      if(inBounds(nr,nc) && dist(nr,nc)>=4 && g[nr][nc].type==='plain'){
+        g[nr][nc].type='desert'; seeds.push([nr,nc]);
+      }
+    }
+  }
+  // Clear center for town
+  for(let dr=-2;dr<=2;dr++) for(let dc=-2;dc<=2;dc++){
+    const r=CENTER+dr, c=CENTER+dc;
+    if(inBounds(r,c) && g[r][c].type!=='plain' && g[r][c].type!=='ocean') g[r][c].type='plain';
+  }
+  // OCEAN border
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+    if(r===0 || c===0 || r===GRID-1 || c===GRID-1){
+      g[r][c].type = 'ocean';
+      g[r][c].owned = false;
+      g[r][c].building = null;
+    }
+  }
+  // Soft coast
+  for(let r=1;r<GRID-1;r++) for(let c=1;c<GRID-1;c++){
+    if(r===1 || c===1 || r===GRID-2 || c===GRID-2){
+      if(dist(r,c) >= 6 && Math.random() < 0.3 && g[r][c].type==='plain'){
+        g[r][c].type = 'ocean';
+      }
+    }
+  }
+  for(let dr=-3;dr<=3;dr++) for(let dc=-3;dc<=3;dc++){
+    const r=CENTER+dr, c=CENTER+dc;
+    if(inBounds(r,c) && g[r][c].type==='ocean' && dist(r,c)<=3) g[r][c].type='plain';
+  }
+}
+
+function newGrid(){
+  const g=[];
+  for(let r=0;r<GRID;r++){
+    const row=[];
+    for(let c=0;c<GRID;c++){
+      row.push({type:'plain',owned:false,building:null,underConstruction:false,buildTimer:0,pulse:0,airportAnchor:null,isAnchor:false});
+    }
+    g.push(row);
+  }
+  generateTerrain(g);
+  g[CENTER][CENTER].owned=true;
+  g[CENTER][CENTER].building={type:'townhall'};
+  return g;
+}
+
+function resetGame(){
+  grid=newGrid();
+  cash=1200;
+  population=0;
+  education=0;
+  incomeRate=0;
+  trafficPenalty=1;
+  townLevel=1;
+  floaters=[];
+  cars=[];
+  cats=[];
+  pedestrians=[];
+  missionIndex=0;
+  crime=0;
+  happiness=100;
+  reviews=[];
+  reviewTimer=0;
+  totalElapsed=0;
+  running=true;
+  paused=false;
+  won=false;
+  tool='buy';
+  weather='clear';
+  weatherTimer=0;
+  weatherDuration=60+Math.random()*80;
+  rainDrops=[];
+}
+
+// ===================== TOOLS =====================
+const TOOL_LIST = [
+  'buy','road','road2','highway','flyover','hut','house','villa','apartment','shop','cafe','restaurant','fuel','cinema',
+  'park','playground','factory','warehouse','oil','mine','office','bank','school','library','highschool','university','museum',
+  'clinic','hospital','police','fire','graveyard','hotel','train','statue','airport','bulldoze'
+];
+
+const TOOL_META = {};
+for(const k of TOOL_LIST){
+  if(k==='buy') TOOL_META[k]={icon:'🗺️',label:'Buy Land'};
+  else if(k==='bulldoze') TOOL_META[k]={icon:'🧨',label:'Demolish'};
+  else {
+    const b=BUILD[k];
+    TOOL_META[k]={icon:b.icon,label:b.label,cost:b.cost,unlockEdu:b.unlockEdu,unlockPop:b.unlockPop,unlockTown:b.unlockTown};
+  }
+}
+
+function isUnlocked(key){
+  if(key==='buy'||key==='bulldoze'||key==='road'||key==='hut'||key==='house'||key==='park'||key==='shop'||key==='graveyard') return true;
+  const m=TOOL_META[key];
+  if(!m) return false;
+  if(m.unlockEdu && education < m.unlockEdu) return false;
+  if(m.unlockPop && population < m.unlockPop) return false;
+  if(m.unlockTown && townLevel < m.unlockTown) return false;
+  return true;
+}
+
+function buildToolbar(){
+  const gridEl=document.getElementById('toolGrid');
+  if(!gridEl) return;
+  gridEl.innerHTML='';
+  for(const key of TOOL_LIST){
+    const meta=TOOL_META[key];
+    const locked=!isUnlocked(key);
+    const btn=document.createElement('div');
+    btn.className='tool'+(tool===key?' active':'')+(locked?' locked':'');
+    btn.dataset.tool=key;
+    let costLine;
+    if(key==='bulldoze') costLine=`<div class="cost" style="color:#f87171;">-50%</div>`;
+    else if(key==='buy') costLine=`<div class="cost">varies</div>`;
+    else if(locked){
+      let req=[];
+      if(meta.unlockEdu) req.push('E'+meta.unlockEdu);
+      if(meta.unlockPop) req.push('P'+meta.unlockPop);
+      if(meta.unlockTown) req.push('T'+meta.unlockTown);
+      costLine=`<div class="cost">🔒${req.join('/')}</div>`;
+    } else costLine=`<div class="cost">$${meta.cost}</div>`;
+    btn.innerHTML=`<div class="ic">${meta.icon}</div><div class="lbl">${meta.label}</div>`+costLine;
+    btn.addEventListener('click',()=>{
+      if(locked){ showToast(meta.label+' locked'); return; }
+      tool=key;
+      refreshToolbar();
+    });
+    gridEl.appendChild(btn);
+  }
+}
+function refreshToolbar(){
+  document.querySelectorAll('#toolGrid .tool').forEach(el=>el.classList.toggle('active',el.dataset.tool===tool));
+}
+
+const sheet=document.getElementById('sheet');
+function openSheet(){ if(sheet) sheet.classList.add('open'); }
+function closeSheet(){ if(sheet) sheet.classList.remove('open'); }
+const sheetCloseBtn=document.getElementById('sheetClose');
+if(sheetCloseBtn) sheetCloseBtn.addEventListener('click',closeSheet);
+if(sheet) sheet.addEventListener('click',e=>{ if(e.target===sheet) closeSheet(); });
+
+// ===================== HELPERS =====================
+function landCost(r,c){
+  // Distance from town hall + terrain value
+  // Plain = most buildings allowed → expensive
+  // Desert / Mountain = special resource tiles → even more expensive
+  const d = dist(r,c);
+  let base = 65 + d * 30;
+  const typ = grid[r][c].type;
+  if(typ === 'plain'){
+    base = Math.round(base * 1.20);          // most buildings allowed
+  } else if(typ === 'desert'){
+    base = Math.round(base * 1.55);          // Oil Refinery — premium resource land
+  } else if(typ === 'mountain'){
+    base = Math.round(base * 1.50);          // Ore Mine — premium resource land
+  }
+  // near river bonus (water access)
+  const nearWater = neighbors(r,c).some(([rr,cc]) => grid[rr][cc].type === 'river');
+  if(nearWater && typ === 'plain') base = Math.round(base * 1.15);
+  return Math.max(45, base);
+}
+function canPlaceBigAt(r,c,type){
+  if(r+1>=GRID || c+1>=GRID) return false;
+  const cells=[[r,c],[r,c+1],[r+1,c],[r+1,c+1]];
+  for(const [rr,cc] of cells){
+    const t=grid[rr][cc];
+    if(!t.owned || t.building) return false;
+    if(t.type==='mountain' || t.type==='river') return false;
+  }
+  return true;
+}
+function drawCostLabel(x, y, s, text, canAfford){
+  const tw = s * 0.72;
+  const th = s * 0.22;
+  const lx = x + (s - tw) / 2;
+  const ly = y + s * 0.72;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(lx, ly, tw, th, 4);
+  else ctx.rect(lx, ly, tw, th);
+  ctx.fill();
+  ctx.fillStyle = canAfford ? '#fbbf24' : '#f87171';
+  ctx.font = `bold ${Math.max(9, s*0.13)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x + s/2, ly + th/2);
+}
+function neighbors(r,c){
+  return [[r-1,c],[r+1,c],[r,c-1],[r,c+1]].filter(([rr,cc])=>inBounds(rr,cc));
+}
+function isBuyable(r,c){
+  const t=grid[r][c];
+  if(t.owned) return false;
+  if(t.type==='river' || t.type==='ocean') return false;
+  return neighbors(r,c).some(([rr,cc])=>grid[rr][cc].owned);
+}
+function hasAdjacent(r,c,type){
+  return neighbors(r,c).some(([rr,cc])=>{
+    const t=grid[rr][cc];
+    return t.building && !t.underConstruction && t.building.type===type;
+  });
+}
+function countAdjacent(r,c,type){
+  return neighbors(r,c).filter(([rr,cc])=>{
+    const t=grid[rr][cc];
+    return t.building && !t.underConstruction && t.building.type===type;
+  }).length;
+}
+function hasWater(r,c){
+  return neighbors(r,c).some(([rr,cc])=>grid[rr][cc].type==='river');
+}
+function countType(type){
+  let n=0;
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+    const t=grid[r][c];
+    if(t.building && !t.underConstruction && t.building.type===type){
+      if((type==='airport'||type==='statue'||type==='train') && !t.isAnchor) continue;
+      n++;
+    }
+  }
+  return n;
+}
+
+
+const ROAD_TYPES = ['road','road2','highway','flyover'];
+function isRoad(type){ return ROAD_TYPES.includes(type); }
+function hasAdjacentRoad(r,c){
+  return neighbors(r,c).some(([rr,cc])=>{
+    const t=grid[rr][cc];
+    return t.building && !t.underConstruction && isRoad(t.building.type);
+  });
+}
+function roadTierAt(r,c){
+  let best = 0;
+  for(const [rr,cc] of neighbors(r,c)){
+    const t=grid[rr][cc];
+    if(t.building && !t.underConstruction && isRoad(t.building.type)){
+      const tier = (BUILD[t.building.type] && BUILD[t.building.type].roadTier) || 1;
+      if(tier > best) best = tier;
+    }
+  }
+  return best;
+}
+function countRoads(){
+  let n=0;
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+    const t=grid[r][c];
+    if(t.building && !t.underConstruction && isRoad(t.building.type)) n++;
+  }
+  return n;
+}
+
+let toastTimer=null;
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),1600);
+}
+function addFloater(r,c,text,color){
+  floaters.push({r,c,text,color,t:0,life:1.1});
+}
+
+// ===================== PLACE BIG =====================
+function tryPlaceBig(r,c,type){
+  const def=BUILD[type];
+  if(r+1>=GRID||c+1>=GRID){ showToast('Not enough room'); return; }
+  const cells=[[r,c],[r,c+1],[r+1,c],[r+1,c+1]];
+  for(const [rr,cc] of cells){
+    const t=grid[rr][cc];
+    if(!t.owned){ showToast('Own all 4 tiles first'); return; }
+    if(t.building){ showToast('Area must be empty'); return; }
+    if(t.type==='mountain'||t.type==='river'){ showToast('Needs flat land'); return; }
+  }
+  if(cash<def.cost){ showToast('Need $'+def.cost); return; }
+  cash-=def.cost;
+  for(const [rr,cc] of cells){
+    grid[rr][cc].building={type};
+    grid[rr][cc].underConstruction=true;
+    grid[rr][cc].buildTimer=def.buildT;
+    grid[rr][cc].airportAnchor=[r,c];
+    grid[rr][cc].isAnchor=(rr===r&&cc===c);
+  }
+  addFloater(r,c,'-$'+def.cost,'#f87171');
+}
+
+function demolishAt(r,c){
+  const t=grid[r][c];
+  if(!t.building||t.building.type==='townhall'){ showToast('Nothing to demolish'); return; }
+  const type=t.building.type;
+  if(type==='airport'||type==='statue'||type==='train'){
+    const [ar,ac]=t.airportAnchor;
+    const def=BUILD[type];
+    const refund=Math.floor(def.cost*0.5);
+    cash+=refund;
+    for(let rr=ar;rr<=ar+1;rr++) for(let cc=ac;cc<=ac+1;cc++){
+      grid[rr][cc].building=null; grid[rr][cc].underConstruction=false;
+      grid[rr][cc].airportAnchor=null; grid[rr][cc].isAnchor=false;
+    }
+    addFloater(ar,ac,'+$'+refund,'#4ade80');
+    return;
+  }
+  const def=BUILD[type];
+  const refund=Math.floor(def.cost*0.5);
+  cash+=refund;
+  t.building=null; t.underConstruction=false;
+  addFloater(r,c,'+$'+refund,'#4ade80');
+}
+
+function handleTileTap(r,c){
+  if(!running||paused) return;
+  const t=grid[r][c];
+  if(tool==='bulldoze'){ demolishAt(r,c); return; }
+  if(t.type==='ocean'){ showToast("Ocean — cannot build here"); return; }
+  if(t.type==='river'){ showToast("River — water source"); return; }
+  if(t.type==='mountain' && tool !== 'mine' && tool !== 'buy' && tool !== 'bulldoze'){
+    showToast("Only Ore Mines on mountains"); return;
+  }
+  if(t.type==='desert' && tool === 'oil'){ /* allowed */ }
+  else if(tool === 'oil' && t.type !== 'desert'){ /* will be caught later */ }
+
+  if(tool==='buy'){
+    if(t.owned){ showToast('Already owned'); return; }
+    if(!isBuyable(r,c)){ showToast('Buy next to owned land'); return; }
+    const cost=landCost(r,c);
+    if(cash<cost){ showToast('Need $'+cost); return; }
+    cash-=cost; t.owned=true; t.pulse=1;
+    addFloater(r,c,'-$'+cost,'#f87171');
+    return;
+  }
+
+  if(['airport','statue','train'].includes(tool)){
+    if(!isUnlocked(tool)){ showToast(TOOL_META[tool].label+' locked'); return; }
+    tryPlaceBig(r,c,tool);
+    return;
+  }
+
+  if(!isUnlocked(tool)){ showToast(TOOL_META[tool].label+' locked'); return; }
+  const def=BUILD[tool];
+  if(!t.owned){ showToast('Buy land first'); return; }
+  if(t.building){ showToast('Already has building'); return; }
+  if(cash<def.cost){ showToast('Need $'+def.cost); return; }
+
+  // Terrain restrictions
+  if(def.terrain === 'desert' && t.type !== 'desert'){
+    showToast('Oil Refinery only on Desert'); return;
+  }
+  if(def.terrain === 'mountain' && t.type !== 'mountain'){
+    showToast('Ore Mine only on Mountain'); return;
+  }
+  // Note: mountain tiles are normally not ownable — we allow special case below
+
+  // Factory / industry limits
+  const industryTypes = ['factory','warehouse','oil','mine'];
+  if(industryTypes.includes(tool)){
+    let totalInd = 0;
+    for(const ty of industryTypes) totalInd += countType(ty);
+    if(totalInd >= maxFactories()){
+      showToast('Industry limit reached (Level ' + townLevel + ')'); return;
+    }
+  }
+  // Big buildings limit
+  const bigTypes = ['airport','statue','train','university','hotel','cinema'];
+  if(bigTypes.includes(tool)){
+    let totalBig = 0;
+    for(const ty of bigTypes) totalBig += countType(ty);
+    if(totalBig >= maxBigBuildings()){
+      showToast('Big building limit for this level'); return;
+    }
+  }
+
+  cash-=def.cost;
+  t.building={type:tool};
+  t.underConstruction=true;
+  t.buildTimer=def.buildT;
+  addFloater(r,c,'-$'+def.cost,'#f87171');
+}
+
+// ===================== TOUCH + MOUSE CONTROLS =====================
+let pointerDown = false;
+let pointerStartX = 0, pointerStartY = 0;
+let pointerMoved = false;
+let hoverR = -1, hoverC = -1;
+const TAP_THRESHOLD = 14; // px — movement beyond this = drag, not tap
+
+function getTileFromEvent(clientX, clientY){
+  const rect = canvas.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  const iso = screenToIso(x, y);
+  return { r: iso.r, c: iso.c, x, y };
+}
+
+function setHover(r, c){
+  if(r === hoverR && c === hoverC) return;
+  hoverR = r; hoverC = c;
+}
+
+function clearHover(){
+  hoverR = -1; hoverC = -1;
+}
+
+function onPointerDown(clientX, clientY){
+  if(!running || paused) return;
+  pointerDown = true;
+  pointerMoved = false;
+  pointerStartX = clientX;
+  pointerStartY = clientY;
+  const { r, c } = getTileFromEvent(clientX, clientY);
+  if(inBounds(r, c)) setHover(r, c);
+}
+
+function onPointerMove(clientX, clientY){
+  if(!pointerDown) return;
+  const dx = clientX - pointerStartX;
+  const dy = clientY - pointerStartY;
+  if(Math.abs(dx) > TAP_THRESHOLD || Math.abs(dy) > TAP_THRESHOLD){
+    pointerMoved = true;
+    clearHover();
+  } else {
+    const { r, c } = getTileFromEvent(clientX, clientY);
+    if(inBounds(r, c)) setHover(r, c);
+  }
+}
+
+function onPointerUp(clientX, clientY){
+  if(!pointerDown) return;
+  pointerDown = false;
+  if(!pointerMoved && running && !paused){
+    const { r, c } = getTileFromEvent(clientX, clientY);
+    if(inBounds(r, c)) handleTileTap(r, c);
+  }
+  clearHover();
+}
+
+// Mouse
+canvas.addEventListener('mousedown', e => {
+  e.preventDefault();
+  onPointerDown(e.clientX, e.clientY);
+});
+window.addEventListener('mousemove', e => {
+  if(pointerDown) onPointerMove(e.clientX, e.clientY);
+});
+window.addEventListener('mouseup', e => {
+  if(pointerDown) onPointerUp(e.clientX, e.clientY);
+});
+
+// Touch (passive:false so we can preventDefault and stop scrolling)
+canvas.addEventListener('touchstart', e => {
+  if(e.touches.length !== 1) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  onPointerDown(t.clientX, t.clientY);
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  if(!pointerDown || e.touches.length !== 1) return;
+  e.preventDefault();
+  const t = e.touches[0];
+  onPointerMove(t.clientX, t.clientY);
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if(e.changedTouches.length){
+    const t = e.changedTouches[0];
+    onPointerUp(t.clientX, t.clientY);
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchcancel', () => {
+  pointerDown = false;
+  clearHover();
+}, { passive: true });
+
+// Prevent context menu / long-press zoom on canvas
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// ===================== ECONOMY =====================
+function calcTownLevel(pop,edu){
+  // Level 1-10 based on pop + edu
+  const score = pop*0.6 + edu*1.8;
+  if(score<8) return 1;
+  if(score<18) return 2;
+  if(score<32) return 3;
+  if(score<50) return 4;
+  if(score<72) return 5;
+  if(score<100) return 6;
+  if(score<135) return 7;
+  if(score<175) return 8;
+  if(score<220) return 9;
+  return 10;
+}
+
+function economyTick(){
+  let income = BUILD.townhall.income;
+  let pop=0, edu=0;
+  let trafficLoad=0, trafficRelief=0;
+
+  for(let r=0;r<GRID;r++){
+    for(let c=0;c<GRID;c++){
+      const t=grid[r][c];
+      if(!t.building||t.underConstruction) continue;
+      const type=t.building.type;
+      if(type==='townhall'||isRoad(type)||type==='park'||type==='graveyard') continue;
+      if((type==='airport'||type==='statue'||type==='train') && !t.isAnchor) continue;
+
+      const def=BUILD[type];
+      let amt=def.income;
+
+      if(HOUSE_TYPES.includes(type)) pop += def.cap;
+      if(def.edu) edu += def.edu;
+
+      // Tourism bonus: statue & hotel boost nearby houses
+      if(HOUSE_TYPES.includes(type)){
+        if(hasAdjacent(r,c,'statue')||hasAdjacent(r,c,'hotel')) amt*=1.25;
+      }
+
+      // ROAD ACCESS — without road, most buildings earn nothing / almost nothing
+      const ROAD_NEEDED = ['shop','cafe','restaurant','fuel','cinema','factory','warehouse','oil','mine',
+        'office','bank','hotel','clinic','hospital','school','library','highschool','university','museum',
+        'police','fire','apartment','villa'];
+      const SOFT_ROAD = ['hut','house']; // can survive without road but weak
+      const tier = roadTierAt(r,c);
+      const hasRoad = tier > 0;
+      if(ROAD_NEEDED.includes(type)){
+        if(!hasRoad){
+          amt = 0; // completely useless without road access
+        } else {
+          // better roads = slight income bonus
+          amt *= (1 + (tier-1)*0.08);
+        }
+      } else if(SOFT_ROAD.includes(type)){
+        if(!hasRoad) amt *= 0.25; // huts/houses barely work off-road
+        else amt *= (1 + (tier-1)*0.05);
+      }
+
+
+      // Water & desert
+      if(type!=='airport'&&type!=='statue'&&type!=='train'){
+        const water=hasWater(r,c);
+        if(t.type==='desert') amt *= water?1.0:0.35;
+        else if(water) amt*=1.12;
+        const parks=countAdjacent(r,c,'park');
+        if(parks>0) amt*=(1+Math.min(2,parks)*0.18);
+        if(HOUSE_TYPES.includes(type)){
+          const factories=countAdjacent(r,c,'factory');
+          if(factories>0) amt*=Math.max(0.35,1-factories*0.22);
+        }
+      }
+
+      // Traffic load
+      if(TRAFFIC_TYPES.includes(type)) trafficLoad++;
+      if(isRoad(type)){
+        const rt = (BUILD[type] && BUILD[type].roadTier) || 1;
+        trafficRelief += 0.5 + rt * 0.55; // small=1.05, 2way=1.6, hwy=2.15, fly=2.7
+      }
+      if(type==='train') trafficRelief+=6;
+      if(type==='police'||type==='fire') trafficRelief+=1.2;
+
+      income+=amt;
+    }
+  }
+
+  // Traffic penalty
+  const needed = Math.max(1, trafficLoad*0.55);
+  trafficPenalty = Math.max(0.35, Math.min(1, (trafficRelief+2)/needed));
+  income *= trafficPenalty;
+
+  // Crime & Happiness system (single clean version)
+  const policeCount = countType('police');
+  const fireCount = countType('fire');
+  const safety = policeCount * 3 + fireCount * 1.5 + (countType('hospital')+countType('clinic')) * 0.8;
+  const crimePressure = Math.max(0, population * 0.15 - safety);
+  crime = Math.min(100, Math.max(0, Math.floor(crimePressure)));
+  if(crime > 40 && policeCount === 0) demandPolice = true;
+  else if(crime < 25) demandPolice = false;
+  if(trafficPenalty < 0.7) demandTraffic = true;
+  else demandTraffic = false;
+
+  happiness = Math.max(20, Math.min(100, 90 - crime * 0.5 + (countType('park')+countType('playground'))*4 + education * 0.3 - (1-trafficPenalty)*20));
+  // Crime hurts income
+  if(crime > 30) income *= Math.max(0.55, 1 - (crime-30)/150);
+
+  // Education & pop bonuses
+  income *= (1 + Math.min(0.4, education*0.008));
+
+  // Weather impact (light)
+  if(weather === 'rain') income *= 0.97;
+  else if(weather === 'storm') income *= 0.90;
+
+  incomeRate=income;
+  cash+=income;
+  population=pop;
+  education=edu;
+  const newLvl=calcTownLevel(pop,edu);
+  if(newLvl>townLevel){
+    townLevel=newLvl;
+    showToast('🎉 Town Level '+townLevel+'!');
+    if(townLevel>=10 && !won){
+      won=true;
+      document.getElementById('winOverlay').style.display='flex';
+    }
+  } else townLevel=newLvl;
+
+  // UI
+  const lvlName = LEVEL_NAMES[townLevel] || ('Level '+townLevel);
+  document.getElementById('townLvlEl').textContent = lvlName;
+  document.getElementById('goalFill').style.width = (townLevel*10)+'%';
+  // Side panel profile
+  const spName=document.getElementById('spName');
+  if(spName) spName.textContent = playerName || 'Player';
+  const spLvl=document.getElementById('spLvl');
+  if(spLvl) spLvl.textContent = lvlName + ' • Level ' + townLevel;
+  // Missions
+  if(missionIndex < MISSIONS.length){
+    const m = MISSIONS[missionIndex];
+    if(m.check()){
+      missionIndex++;
+      showToast('Mission complete!');
+    }
+  }
+  updateMissionList();
+  const trEl=document.getElementById('trafficEl');
+  if(demandPolice){
+    trEl.textContent='🚔 Need Police Station!';
+    trEl.style.color='#f87171';
+  } else if(crime > 55){
+    trEl.textContent='Crime high — build Police!';
+    trEl.style.color='#f87171';
+  } else if(crime > 35){
+    trEl.textContent='Crime rising — need Police';
+    trEl.style.color='#fbbf24';
+  } else if(demandTraffic || trafficPenalty < 0.75){
+    trEl.textContent='Traffic -'+Math.round((1-trafficPenalty)*100)+'%';
+    trEl.style.color='#f87171';
+  } else {
+    trEl.textContent='';
+  }
+}
+
+// ===================== CLOCK =====================
+function dayPhase(){ return (totalElapsed%DAY_LENGTH)/DAY_LENGTH; }
+function dayNumber(){ return Math.floor(totalElapsed/DAY_LENGTH)+1; }
+function lightLevel(phase){ return Math.max(0,Math.sin((phase-0.25)*2*Math.PI)); }
+function phaseLabel(hour){
+  if(hour>=5&&hour<11) return ['Morning','🌅'];
+  if(hour>=11&&hour<16) return ['Afternoon','☀️'];
+  if(hour>=16&&hour<19) return ['Evening','🌇'];
+  return ['Night','🌙'];
+}
+function updateClockUI(){
+  const phase=dayPhase();
+  const hourF=phase*24;
+  const hh=Math.floor(hourF), mm=Math.floor((hourF-hh)*60);
+  const [lbl,icon]=phaseLabel(hourF);
+  document.getElementById('clockEl').textContent=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+  document.getElementById('clockIcon').textContent=icon;
+  document.getElementById('phaseEl').textContent=lbl;
+  document.getElementById('dayEl').textContent='Day '+dayNumber();
+  const wEl=document.getElementById('weatherEl');
+  if(wEl) wEl.textContent = WEATHER_LABELS[weather] || weather;
+  updateMusicMood(lightLevel(dayPhase()));
+}
+
+// ===================== UPDATE =====================
+let lastT=0, tickAcc=0;
+function pickNextWeather(){
+  // weighted: clear more common, storm rarer
+  const roll = Math.random();
+  if(roll < 0.38) return 'clear';
+  if(roll < 0.62) return 'cloudy';
+  if(roll < 0.88) return 'rain';
+  return 'storm';
+}
+function spawnRain(count){
+  const ww = W || 400, hh = H || 400;
+  for(let i=0;i<count;i++){
+    rainDrops.push({
+      x: Math.random()*ww,
+      y: Math.random()*-hh*0.3,
+      len: 8 + Math.random()*14,
+      spd: 280 + Math.random()*220,
+      thick: weather==='storm' ? 1.6 : 1.1
+    });
+  }
+}
+function updateWeather(dt){
+  weatherTimer += dt;
+  if(weatherTimer >= weatherDuration){
+    weatherTimer = 0;
+    weatherDuration = 50 + Math.random()*100;
+    const prev = weather;
+    weather = pickNextWeather();
+    if(weather !== prev){
+      showToast(WEATHER_LABELS[weather] || weather);
+      rainDrops = [];
+    }
+  }
+  // maintain rain particles
+  if(weather === 'rain' || weather === 'storm'){
+    const target = weather === 'storm' ? 90 : 45;
+    if(rainDrops.length < target) spawnRain(8);
+    for(const d of rainDrops){
+      d.y += d.spd * dt;
+      d.x += (weather==='storm' ? 40 : 18) * dt;
+      if(d.y > H + 20){ d.y = -10; d.x = Math.random()*W; }
+    }
+    if(rainDrops.length > target + 20) rainDrops.length = target;
+  } else {
+    rainDrops = [];
+  }
+}
+
+function update(dt){
+  totalElapsed+=dt; animTime+=dt; tickAcc+=dt;
+  if(tickAcc>=1){
+    tickAcc-=1;
+    economyTick();
+    buildToolbar();
+  }
+  updateClockUI();
+  updateWeather(dt);
+  // NPC reviews every ~18-28s
+  reviewTimer += dt;
+  if(reviewTimer >= 18 + Math.random()*10){
+    reviewTimer = 0;
+    if(running && !paused && population > 0) pushReview();
+  }
+  updateHappinessUI();
+  updateParticles(dt);
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+    const t=grid[r][c];
+    if(t.pulse>0) t.pulse=Math.max(0,t.pulse-dt*2);
+    if(t.underConstruction){
+      t.buildTimer-=dt;
+      if(t.buildTimer<=0){
+        const btype = t.building && t.building.type;
+        const isBig = btype && ['airport','statue','train'].includes(btype);
+        if(isBig && t.airportAnchor){
+          const [ar,ac] = t.airportAnchor;
+          for(let rr=ar;rr<=ar+1;rr++) for(let cc=ac;cc<=ac+1;cc++){
+            if(inBounds(rr,cc)){
+              grid[rr][cc].underConstruction = false;
+              grid[rr][cc].buildTimer = 0;
+            }
+          }
+          if(t.isAnchor) addFloater(ar,ac,'Ready!','#4ade80');
+        } else {
+          t.underConstruction=false;
+          addFloater(r,c,'Ready!','#4ade80');
+        }
+        // construction dust burst
+        {
+          const pos = isoToScreen(r, c, 5);
+          for(let k=0;k<8;k++){
+            spawnParticle(pos.x+(Math.random()-0.5)*20, pos.y+(Math.random()-0.5)*10, 'dust', {
+              vx:(Math.random()-0.5)*40, vy:-10-Math.random()*30, size:2+Math.random()*3,
+              color:'#c4a882', life:0.6+Math.random()*0.5, gravity:40
+            });
+          }
+        }
+      }
+    }
+  }
+  for(const f of floaters) f.t+=dt;
+  floaters=floaters.filter(f=>f.t<f.life);
+
+  // ----- Cars on roads -----
+  // Spawn cars occasionally
+  if(Math.random() < dt * 0.55 && cars.length < 12){
+    const roadTiles = [];
+    for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+      const t=grid[r][c];
+      if(t.building && !t.underConstruction && isRoad(t.building.type)) roadTiles.push([r,c]);
+    }
+    if(roadTiles.length > 0){
+      const [sr,sc] = roadTiles[ri(0,roadTiles.length-1)];
+      const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+      const validDirs = dirs.filter(([dr,dc])=>{
+        const nr=sr+dr, nc=sc+dc;
+        return inBounds(nr,nc) && grid[nr][nc].building && isRoad(grid[nr][nc].building.type);
+      });
+      const dir = validDirs.length ? validDirs[ri(0,validDirs.length-1)] : dirs[ri(0,3)];
+      cars.push({
+        r: sr, c: sc, progress: 0,
+        dr: dir[0], dc: dir[1],
+        color: CAR_COLORS[ri(0,CAR_COLORS.length-1)],
+        speed: 0.7 + Math.random()*0.9
+      });
+    }
+  }
+  // Move cars
+  for(const car of cars){
+    car.progress += car.speed * dt;
+    if(car.progress >= 1){
+      car.progress = 0;
+      car.r += car.dr;
+      car.c += car.dc;
+      // try turn or continue
+      if(!inBounds(car.r,car.c) || !(grid[car.r][car.c].building && isRoad(grid[car.r][car.c].building.type))){
+        car.dead = true;
+      } else {
+        // maybe change direction at intersection
+        if(Math.random() < 0.35){
+          const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+          const valid = dirs.filter(([dr,dc])=>{
+            if(dr===-car.dr && dc===-car.dc) return false; // no U-turn
+            const nr=car.r+dr, nc=car.c+dc;
+            return inBounds(nr,nc) && grid[nr][nc].building && isRoad(grid[nr][nc].building.type);
+          });
+          if(valid.length){
+            const d = valid[ri(0,valid.length-1)];
+            car.dr = d[0]; car.dc = d[1];
+          }
+        }
+      }
+    }
+  }
+  cars = cars.filter(c => !c.dead);
+
+  // ----- Cats (rare, max 3, spread out, longer sits) -----
+  if(Math.random() < dt * 0.045 && cats.length < 3){
+    const occupied = new Set(cats.map(c => c.r + ',' + c.c));
+    const spots = [];
+    for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+      const t=grid[r][c];
+      if(occupied.has(r+','+c)) continue;
+      if(t.owned && t.building && !t.underConstruction &&
+         (t.building.type==='park' || t.building.type==='playground' || t.building.type==='graveyard')){
+        spots.push([r,c]);
+      }
+    }
+    if(spots.length){
+      const [sr,sc] = spots[ri(0,spots.length-1)];
+      cats.push({
+        r:sr, c:sc, progress:0,
+        dr: [0,1,0,-1][ri(0,3)], dc: [1,0,-1,0][ri(0,3)],
+        color: CAT_COLORS[ri(0,CAT_COLORS.length-1)],
+        speed: 0.22 + Math.random()*0.28,
+        sitTimer: 2 + Math.random()*4,
+        frame: 0,
+        life: 25 + Math.random()*35
+      });
+    }
+  }
+  for(const cat of cats){
+    cat.life -= dt;
+    if(cat.life <= 0){ cat.dead = true; continue; }
+    if(cat.sitTimer > 0){
+      cat.sitTimer -= dt;
+      continue;
+    }
+    cat.progress += cat.speed * dt;
+    cat.frame += dt * 5;
+    if(cat.progress >= 1){
+      cat.progress = 0;
+      cat.r += cat.dr;
+      cat.c += cat.dc;
+      if(!inBounds(cat.r,cat.c) || !grid[cat.r][cat.c].owned){
+        cat.dead = true;
+      } else {
+        // sit more often and longer
+        if(Math.random() < 0.45) cat.sitTimer = 3 + Math.random()*6;
+        if(Math.random() < 0.35){
+          const dirs=[[0,1],[0,-1],[1,0],[-1,0]];
+          const d = dirs[ri(0,3)];
+          cat.dr=d[0]; cat.dc=d[1];
+        }
+      }
+    }
+  }
+  cats = cats.filter(c => !c.dead);
+
+  // ----- Pedestrians (walk on roads) -----
+  if(Math.random() < dt * 0.25 && pedestrians.length < 10){
+    const roadTiles = [];
+    for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+      const t=grid[r][c];
+      if(t.building && !t.underConstruction && isRoad(t.building.type)) roadTiles.push([r,c]);
+    }
+    if(roadTiles.length){
+      const [sr,sc] = roadTiles[ri(0,roadTiles.length-1)];
+      const dirs=[[0,1],[0,-1],[1,0],[-1,0]];
+      const d = dirs[ri(0,3)];
+      const skin = ['#f5d0a0','#c68642','#8d5524','#e0b090','#d4a574'][ri(0,4)];
+      const shirt = ['#3b82f6','#ef4444','#22c55e','#a855f7','#f59e0b','#ec4899','#14b8a6'][ri(0,6)];
+      pedestrians.push({
+        r:sr, c:sc, progress:0, dr:d[0], dc:d[1],
+        speed: 0.4+Math.random()*0.35, skin, shirt,
+        life: 12+Math.random()*20
+      });
+    }
+  }
+  for(const p of pedestrians){
+    p.life -= dt;
+    if(p.life<=0){ p.dead=true; continue; }
+    p.progress += p.speed * dt;
+    if(p.progress >= 1){
+      p.progress = 0;
+      p.r += p.dr; p.c += p.dc;
+      if(!inBounds(p.r,p.c) || !(grid[p.r][p.c].building && isRoad(grid[p.r][p.c].building.type))){
+        p.dead = true;
+      } else if(Math.random()<0.3){
+        const dirs=[[0,1],[0,-1],[1,0],[-1,0]];
+        const valid = dirs.filter(([dr,dc])=>{
+          const nr=p.r+dr, nc=p.c+dc;
+          return inBounds(nr,nc) && grid[nr][nc].building && isRoad(grid[nr][nc].building.type);
+        });
+        if(valid.length){ const d=valid[ri(0,valid.length-1)]; p.dr=d[0]; p.dc=d[1]; }
+      }
+    }
+  }
+  pedestrians = pedestrians.filter(p => !p.dead);
+
+
+  // Ambient: wind, leaves, fireflies, factory smoke
+  const lightNow = lightLevel(dayPhase());
+  // Constant wind streaks / dust in air
+  if(Math.random() < dt * 4 && particles.length < MAX_PARTICLES - 30){
+    const side = Math.random() < 0.5;
+    spawnParticle(side ? -10 : W + 10, rnd(H*0.1, H*0.85), 'leaf', {
+      vx: side ? (40+Math.random()*50) : -(40+Math.random()*50),
+      vy: (Math.random()-0.5)*18,
+      size: 1.5+Math.random()*2.5,
+      color: Math.random()>0.6 ? 'rgba(200,220,240,0.5)' : (Math.random()>0.5?'#6a9a40':'#c4a060'),
+      life: 2.5+Math.random()*2,
+      gravity: 2
+    });
+  }
+  // River mist / spray
+  if(Math.random() < dt * 1.2){
+    for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+      if(grid[r][c].type==='river' && Math.random()<0.08){
+        const pos = isoToScreen(r, c, 2);
+        spawnParticle(pos.x+rnd(-6,6), pos.y+rnd(-4,2), 'dust', {
+          vx:(Math.random()-0.5)*12, vy:-8-Math.random()*15,
+          size:1.5+Math.random()*2, color:'rgba(180,220,255,0.5)',
+          life:0.8+Math.random()*0.6, gravity:5
+        });
+      }
+      if(grid[r][c].type==='ocean' && Math.random()<0.04){
+        const pos = isoToScreen(r, c, 1);
+        spawnParticle(pos.x+rnd(-8,8), pos.y, 'dust', {
+          vx:(Math.random()-0.5)*20, vy:-5-Math.random()*10,
+          size:2+Math.random()*2, color:'rgba(160,210,255,0.35)',
+          life:0.7+Math.random()*0.5, gravity:3
+        });
+      }
+    }
+  }
+  if(isNight(lightNow) && Math.random() < dt * 2.0 && particles.length < MAX_PARTICLES - 20){
+    const spots = [];
+    for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+      if(grid[r][c].owned && grid[r][c].building) spots.push([r,c]);
+    }
+    if(spots.length){
+      const [sr,sc] = spots[ri(0,spots.length-1)];
+      const pos = isoToScreen(sr, sc, 10);
+      spawnParticle(pos.x + rnd(-8,8), pos.y + rnd(-20,-5), 'firefly', {
+        vx:(Math.random()-0.5)*15, vy:(Math.random()-0.5)*10,
+        size:1.5+Math.random()*2, color:'#d0f080', life:2+Math.random()*3, gravity:0
+      });
+    }
+  }
+  if(Math.random() < dt * 0.6){
+    for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+      const t=grid[r][c];
+      if(t.building && !t.underConstruction && (t.building.type==='park'||t.building.type==='playground') && Math.random()<0.1){
+        const pos = isoToScreen(r, c, 5);
+        spawnParticle(pos.x, pos.y - 8, 'leaf', {
+          vx:(Math.random()-0.5)*25, vy:5+Math.random()*12,
+          size:2+Math.random()*2, color: Math.random()>0.5?'#4a8a30':'#8a6a20',
+          life:1.5+Math.random(), gravity:12
+        });
+      }
+    }
+  }
+  if(Math.random() < dt * 2.2){
+    for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+      const t=grid[r][c];
+      if(!t.building || t.underConstruction) continue;
+      const ty = t.building.type;
+      if(ty==='factory' || ty==='oil'){
+        if(Math.random() < 0.18){
+          const pos = isoToScreen(r, c, (BUILD_H[ty]||20)*(isoTW/40));
+          spawnParticle(pos.x + rnd(-6,6), pos.y - 5, 'smoke', {
+            vx:(Math.random()-0.5)*10 + 8, vy:-15-Math.random()*25,
+            size:4+Math.random()*5, color: ty==='oil'?'#5a5a4a':'#6a6a78',
+            life:1.4+Math.random(), gravity:-10
+          });
+        }
+      }
+    }
+  }
+
+  const cashStr = Math.floor(cash).toLocaleString('en-US');
+  const incStr = '+$'+Math.round(incomeRate)+'/s';
+  document.getElementById('cashEl').textContent=cashStr;
+  document.getElementById('popEl').textContent=population;
+  document.getElementById('eduEl').textContent=education;
+  document.getElementById('incomeEl').textContent=incStr;
+  // Side panel mirrors
+  const spCash=document.getElementById('spCash'); if(spCash) spCash.textContent='$'+cashStr;
+  const spPop=document.getElementById('spPop'); if(spPop) spPop.textContent='👥 '+population;
+  const spEdu=document.getElementById('spEdu'); if(spEdu) spEdu.textContent='📚 '+education;
+  const spInc=document.getElementById('spInc'); if(spInc) spInc.textContent=incStr;
+}
+
+
+function starsStr(n){
+  n = Math.max(1, Math.min(5, Math.round(n)));
+  return '★'.repeat(n) + '☆'.repeat(5-n);
+}
+function pushReview(){
+  let pool, stars, cls;
+  if(happiness >= 70 && crime < 35){
+    pool = REVIEW_GOOD; stars = 4 + (Math.random()>0.5?1:0); cls = 'good';
+  } else if(happiness >= 45 && crime < 55){
+    pool = REVIEW_MID; stars = 3; cls = 'mid';
+  } else {
+    pool = REVIEW_BAD; stars = 1 + (Math.random()>0.5?1:0); cls = 'bad';
+  }
+  // bias by specific issues
+  if(crime > 50 && Math.random()<0.4){
+    pool = REVIEW_BAD; stars = 1; cls = 'bad';
+  }
+  if(trafficPenalty < 0.65 && Math.random()<0.35){
+    pool = ['Traffic is horrible. Need roads!','Need better public transport.','Roads are a mess right now.'];
+    stars = Math.min(stars, 2); cls = 'bad';
+  }
+  const name = NPC_NAMES[ri(0, NPC_NAMES.length-1)];
+  const text = pool[ri(0, pool.length-1)];
+  reviews.unshift({ name, text, stars, cls, t: totalElapsed });
+  if(reviews.length > 8) reviews.length = 8;
+  renderReviews();
+}
+function renderReviews(){
+  const list = document.getElementById('reviewList');
+  if(!list) return;
+  list.innerHTML = '';
+  if(!reviews.length){
+    list.innerHTML = '<div class="review-item mid"><div class="rev-body">Waiting for citizens to share feedback...</div></div>';
+    return;
+  }
+  for(const r of reviews){
+    const div = document.createElement('div');
+    div.className = 'review-item ' + r.cls;
+    div.innerHTML = '<div class="rev-head"><span class="rev-name">'+r.name+'</span><span class="rev-stars">'+starsStr(r.stars)+'</span></div><div class="rev-body">"'+r.text+'"</div>';
+    list.appendChild(div);
+  }
+}
+function updateHappinessUI(){
+  const fill = document.getElementById('hapFill');
+  const txt = document.getElementById('hapTxt');
+  if(txt) txt.textContent = Math.round(happiness) + '%';
+  if(fill){
+    fill.style.width = Math.round(happiness) + '%';
+    fill.style.background = happiness>=70 ? '#4ade80' : happiness>=45 ? '#fbbf24' : '#f87171';
+  }
+}
+
+function updateMissionList(){
+  const list=document.getElementById('missionList');
+  if(!list) return;
+  list.innerHTML='';
+  MISSIONS.forEach((m,i)=>{
+    const div=document.createElement('div');
+    let cls='mission-item';
+    if(i < missionIndex) cls+=' done';
+    else if(i === missionIndex) cls+=' current';
+    div.className=cls;
+    const txt = typeof m.text === 'function' ? m.text() : m.text;
+    div.innerHTML = `<span class="m-num">${i+1}.</span>${txt}`;
+    list.appendChild(div);
+  });
+  // scroll current into view
+  const cur = list.querySelector('.current');
+  if(cur) cur.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+
+
+// ===================== GRAPHICS — TRUE ISOMETRIC 3D CITY RENDERER =====================
+function hash2(x,y){ const n = Math.sin(x*127.1 + y*311.7) * 43758.5453; return n - Math.floor(n); }
+function noise2(x,y){
+  const ix=Math.floor(x), iy=Math.floor(y);
+  const fx=x-ix, fy=y-iy;
+  const a=hash2(ix,iy), b=hash2(ix+1,iy), c=hash2(ix,iy+1), d=hash2(ix+1,iy+1);
+  const ux=fx*fx*(3-2*fx), uy=fy*fy*(3-2*fy);
+  return a+(b-a)*ux + (c-a)*uy + (a-b-c+d)*ux*uy;
+}
+function fbm(x,y,oct=3){
+  let v=0, a=0.5, f=1;
+  for(let i=0;i<oct;i++){ v+=a*noise2(x*f,y*f); a*=0.5; f*=2; }
+  return v;
+}
+function lerpColor(c1,c2,t){
+  t=Math.max(0,Math.min(1,t));
+  const a=anyToRgb(c1),b=anyToRgb(c2);
+  return `rgb(${Math.round(a[0]+(b[0]-a[0])*t)},${Math.round(a[1]+(b[1]-a[1])*t)},${Math.round(a[2]+(b[2]-a[2])*t)})`;
+}
+function hexToRgb(hex){ hex=hex.replace('#',''); if(hex.length===3) hex=hex.split('').map(c=>c+c).join(''); return [parseInt(hex.substr(0,2),16),parseInt(hex.substr(2,2),16),parseInt(hex.substr(4,2),16)]; }
+function anyToRgb(c){
+  if(typeof c !== 'string') return [128,128,128];
+  if(c.startsWith('#')) return hexToRgb(c);
+  const m = c.match(/rgba?\(([^)]+)\)/);
+  if(m){ const p = m[1].split(',').map(v=>parseFloat(v)); return [p[0]||0,p[1]||0,p[2]||0]; }
+  return [128,128,128];
+}
+function shadeColor(c, amt){
+  const [r,g,b] = anyToRgb(c);
+  const t = amt > 0 ? [255,255,255] : [0,0,0];
+  const f = Math.abs(amt);
+  return `rgb(${Math.round(r+(t[0]-r)*f)},${Math.round(g+(t[1]-g)*f)},${Math.round(b+(t[2]-b)*f)})`;
+}
+function isNight(light){ return light < 0.42; }
+function glowWin(light){
+  if(light > 0.55) return '#a8d4f0';
+  if(light > 0.35) return '#ffe8a8';
+  if(light > 0.18) return '#ffd468';
+  return '#ffc040';
+}
+
+// Draw an isometric diamond (ground tile)
+function isoDiamond(cx, cy, tw, th, fill, stroke){
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - th);      // top
+  ctx.lineTo(cx + tw, cy);      // right
+  ctx.lineTo(cx, cy + th);      // bottom
+  ctx.lineTo(cx - tw, cy);      // left
+  ctx.closePath();
+  if(fill){ ctx.fillStyle = fill; ctx.fill(); }
+  if(stroke){ ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+}
+
+// Draw a vertical isometric box (building mass)
+// base at (cx, cy) ground point, height h, half-width tw, half-depth th
+function isoBox(cx, cy, tw, th, h, topCol, leftCol, rightCol){
+  // LEFT face (darker, west)
+  ctx.beginPath();
+  ctx.moveTo(cx - tw, cy);
+  ctx.lineTo(cx - tw, cy - h);
+  ctx.lineTo(cx, cy + th - h);
+  ctx.lineTo(cx, cy + th);
+  ctx.closePath();
+  const leftGrad = ctx.createLinearGradient(cx - tw, cy - h*0.5, cx, cy + th*0.3 - h*0.3);
+  leftGrad.addColorStop(0, leftCol);
+  leftGrad.addColorStop(1, shadeColor(leftCol, -0.12));
+  ctx.fillStyle = leftGrad;
+  ctx.fill();
+
+  // RIGHT face (medium)
+  ctx.beginPath();
+  ctx.moveTo(cx + tw, cy);
+  ctx.lineTo(cx + tw, cy - h);
+  ctx.lineTo(cx, cy + th - h);
+  ctx.lineTo(cx, cy + th);
+  ctx.closePath();
+  const rightGrad = ctx.createLinearGradient(cx + tw, cy - h*0.5, cx, cy + th*0.3 - h*0.3);
+  rightGrad.addColorStop(0, rightCol);
+  rightGrad.addColorStop(1, shadeColor(rightCol, -0.08));
+  ctx.fillStyle = rightGrad;
+  ctx.fill();
+
+  // TOP face (brightest)
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - th - h);
+  ctx.lineTo(cx + tw, cy - h);
+  ctx.lineTo(cx, cy + th - h);
+  ctx.lineTo(cx - tw, cy - h);
+  ctx.closePath();
+  const topGrad = ctx.createLinearGradient(cx - tw*0.3, cy - th - h, cx + tw*0.3, cy + th - h);
+  topGrad.addColorStop(0, shadeColor(topCol, 0.08));
+  topGrad.addColorStop(1, topCol);
+  ctx.fillStyle = topGrad;
+  ctx.fill();
+
+  // Crisp edges
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(cx - tw, cy); ctx.lineTo(cx - tw, cy - h);
+  ctx.lineTo(cx, cy - th - h); ctx.lineTo(cx + tw, cy - h); ctx.lineTo(cx + tw, cy);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx - tw, cy - h); ctx.lineTo(cx, cy + th - h); ctx.lineTo(cx + tw, cy - h);
+  ctx.stroke();
+  // Top edge highlight
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx - tw + 1, cy - h); ctx.lineTo(cx, cy - th - h + 1); ctx.lineTo(cx + tw - 1, cy - h);
+  ctx.stroke();
+}
+
+// Windows on left + right faces of iso box
+function isoWindows(cx, cy, tw, th, h, light, rows, cols, litChance){
+  // Windows projected onto left & right isometric faces
+  const marginY = Math.max(3, h * 0.08);
+  const marginX = 0.12;
+  const usableH = h - marginY * 2;
+  const winH = Math.max(2.5, usableH / rows * 0.55);
+  const gapY = (usableH - winH * rows) / Math.max(1, rows + 1);
+
+  for(let row = 0; row < rows; row++){
+    const yOff = marginY + gapY * (row + 1) + winH * row + winH * 0.5;
+    for(let col = 0; col < cols; col++){
+      const lit = isNight(light) && (hash2(cx * 0.13 + col * 1.7, cy * 0.11 + row * 2.3) < litChance);
+      const glass = lit ? glowWin(light) : (light > 0.5 ? 'rgba(90,130,170,0.4)' : 'rgba(15,25,40,0.55)');
+      const t = (col + 0.5) / cols; // 0..1 along face depth
+
+      // --- LEFT face: from (cx-tw, cy-h) to (cx, cy+th-h) at top, same at bottom
+      // Parametric along left face horizontal
+      const lx0 = cx - tw, ly0 = cy - yOff;
+      const lx1 = cx, ly1 = cy + th - yOff;
+      const lpx = lx0 + (lx1 - lx0) * (marginX + t * (1 - marginX * 2));
+      const lpy = ly0 + (ly1 - ly0) * (marginX + t * (1 - marginX * 2));
+      const lw = Math.max(2, tw * 0.22);
+
+      if(lit){
+        ctx.fillStyle = glass;
+        ctx.globalAlpha = 0.95;
+        ctx.fillRect(lpx - lw * 0.45, lpy - winH * 0.45, lw * 0.9, winH * 0.9);
+        // soft bloom
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath();
+        ctx.ellipse(lpx, lpy, lw * 1.8, winH * 1.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.fillStyle = glass;
+        ctx.fillRect(lpx - lw * 0.4, lpy - winH * 0.4, lw * 0.8, winH * 0.8);
+      }
+
+      // --- RIGHT face
+      const rx0 = cx + tw, ry0 = cy - yOff;
+      const rx1 = cx, ry1 = cy + th - yOff;
+      const rpx = rx0 + (rx1 - rx0) * (marginX + t * (1 - marginX * 2));
+      const rpy = ry0 + (ry1 - ry0) * (marginX + t * (1 - marginX * 2));
+
+      if(lit){
+        ctx.fillStyle = glass;
+        ctx.globalAlpha = 0.9;
+        ctx.fillRect(rpx - lw * 0.45, rpy - winH * 0.45, lw * 0.9, winH * 0.9);
+        ctx.globalAlpha = 0.35;
+        ctx.beginPath();
+        ctx.ellipse(rpx, rpy, lw * 1.7, winH * 1.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.fillStyle = glass;
+        ctx.fillRect(rpx - lw * 0.4, rpy - winH * 0.4, lw * 0.8, winH * 0.8);
+      }
+    }
+  }
+}
+
+function drawIsoTileGround(r, c, light){
+  const t = grid[r][c];
+  const {x:cx, y:cy} = isoToScreen(r, c, 0);
+  const tw = isoTW * 0.98, th = isoTH * 0.98;
+
+  const slabH = Math.max(2, isoTH * 0.18);
+  if(t.type !== 'ocean'){
+    const sideCol = t.type==='river' ? 'rgba(6,40,60,0.7)' :
+                    t.type==='mountain' ? 'rgba(30,30,42,0.75)' :
+                    t.type==='desert' ? 'rgba(70,45,18,0.7)' : 'rgba(12,40,20,0.7)';
+    ctx.beginPath();
+    ctx.moveTo(cx - tw, cy); ctx.lineTo(cx - tw, cy + slabH);
+    ctx.lineTo(cx, cy + th + slabH); ctx.lineTo(cx, cy + th);
+    ctx.closePath();
+    ctx.fillStyle = sideCol;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + tw, cy); ctx.lineTo(cx + tw, cy + slabH);
+    ctx.lineTo(cx, cy + th + slabH); ctx.lineTo(cx, cy + th);
+    ctx.closePath();
+    ctx.fillStyle = t.type==='river' ? 'rgba(8,50,70,0.65)' :
+                    t.type==='mountain' ? 'rgba(38,38,52,0.7)' :
+                    t.type==='desert' ? 'rgba(85,55,22,0.65)' : 'rgba(18,50,28,0.65)';
+    ctx.fill();
+  }
+
+  if(t.type === 'ocean'){
+    const wave = Math.sin(animTime*1.4 + r*0.3 + c*0.25)*2.5;
+    const wave2 = Math.sin(animTime*2.1 + r*0.5 + c*0.4)*1.5;
+    // deep ocean slab sides
+    ctx.fillStyle = 'rgba(4,30,55,0.85)';
+    ctx.beginPath();
+    ctx.moveTo(cx - tw, cy); ctx.lineTo(cx - tw, cy + slabH+1);
+    ctx.lineTo(cx, cy + th + slabH+1); ctx.lineTo(cx, cy + th);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(6,40,70,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(cx + tw, cy); ctx.lineTo(cx + tw, cy + slabH+1);
+    ctx.lineTo(cx, cy + th + slabH+1); ctx.lineTo(cx, cy + th);
+    ctx.closePath(); ctx.fill();
+    // surface
+    const og = ctx.createLinearGradient(cx, cy - th, cx, cy + th);
+    og.addColorStop(0, lerpColor('#0a3050', '#1a6090', light*0.45+0.35));
+    og.addColorStop(0.5, lerpColor('#0c4870', '#2080b0', light*0.5+0.35));
+    og.addColorStop(1, lerpColor('#083858', '#186898', light*0.42+0.38));
+    isoDiamond(cx, cy + wave*0.2, tw, th, og, 'rgba(40,120,180,0.2)');
+    // foam near coast if adjacent to land
+    const nearLand = neighbors(r,c).some(([rr,cc])=> grid[rr][cc].type !== 'ocean' && grid[rr][cc].type !== 'river');
+    if(nearLand){
+      ctx.strokeStyle = `rgba(200,230,255,${0.25+light*0.15})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - th*0.85);
+      ctx.lineTo(cx + tw*0.85, cy);
+      ctx.lineTo(cx, cy + th*0.85);
+      ctx.lineTo(cx - tw*0.85, cy);
+      ctx.closePath();
+      ctx.stroke();
+    }
+    // wave highlights
+    ctx.fillStyle = `rgba(160,220,255,${0.12+light*0.12})`;
+    ctx.beginPath();
+    ctx.moveTo(cx - tw*0.4, cy + wave2*0.3);
+    ctx.lineTo(cx, cy - th*0.25 + wave);
+    ctx.lineTo(cx + tw*0.4, cy + wave2*0.3);
+    ctx.closePath(); ctx.fill();
+  } else if(t.type === 'river'){
+    const wave = Math.sin(animTime*1.9 + r*0.45 + c*0.35)*2.2;
+    const wave2 = Math.sin(animTime*2.6 + r*0.2 + c*0.5)*1.4;
+    // deep water
+    const wg = ctx.createLinearGradient(cx, cy - th, cx, cy + th);
+    wg.addColorStop(0, lerpColor('#062838', '#0e6090', light*0.5+0.35));
+    wg.addColorStop(0.5, lerpColor('#0a4870', '#1a90b0', light*0.52+0.38));
+    wg.addColorStop(1, lerpColor('#083040', '#146888', light*0.45+0.4));
+    isoDiamond(cx, cy + wave*0.25, tw, th, wg, 'rgba(60,140,190,0.25)');
+    // current band
+    ctx.fillStyle = `rgba(40,160,200,${0.2+light*0.15})`;
+    ctx.beginPath();
+    ctx.moveTo(cx - tw*0.55, cy + wave*0.3);
+    ctx.lineTo(cx, cy - th*0.25 + wave2);
+    ctx.lineTo(cx + tw*0.55, cy + wave*0.3);
+    ctx.lineTo(cx, cy + th*0.2 + wave*0.2);
+    ctx.closePath(); ctx.fill();
+    // specular
+    ctx.fillStyle = `rgba(180,240,255,${0.18+light*0.22})`;
+    ctx.beginPath();
+    ctx.moveTo(cx - tw*0.25, cy - th*0.05 + wave);
+    ctx.lineTo(cx, cy - th*0.3 + wave);
+    ctx.lineTo(cx + tw*0.25, cy - th*0.05 + wave);
+    ctx.closePath(); ctx.fill();
+  } else if(t.type === 'mountain'){
+    isoDiamond(cx, cy, tw, th, lerpColor('#2e2e40', '#4a4a60', light*0.38+0.35), 'rgba(0,0,0,0.3)');
+    // multi peaks
+    ctx.fillStyle = lerpColor('#3a3a52', '#5c5c74', light*0.4);
+    ctx.beginPath();
+    ctx.moveTo(cx - tw*0.45, cy + th*0.1);
+    ctx.lineTo(cx - tw*0.15, cy - th*0.7 - 10);
+    ctx.lineTo(cx + tw*0.1, cy + th*0.15);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = lerpColor('#44445c', '#686880', light*0.42);
+    ctx.beginPath();
+    ctx.moveTo(cx - tw*0.05, cy + th*0.15);
+    ctx.lineTo(cx + tw*0.2, cy - th*0.85 - 12);
+    ctx.lineTo(cx + tw*0.5, cy + th*0.1);
+    ctx.closePath(); ctx.fill();
+    // snow
+    ctx.fillStyle = lerpColor('#d0d8f0', '#ffffff', light*0.5+0.3);
+    ctx.beginPath();
+    ctx.moveTo(cx - tw*0.22, cy - th*0.35 - 4);
+    ctx.lineTo(cx - tw*0.15, cy - th*0.7 - 10);
+    ctx.lineTo(cx - tw*0.02, cy - th*0.3 - 3);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + tw*0.1, cy - th*0.4 - 5);
+    ctx.lineTo(cx + tw*0.2, cy - th*0.85 - 12);
+    ctx.lineTo(cx + tw*0.35, cy - th*0.35 - 4);
+    ctx.closePath(); ctx.fill();
+  } else if(t.type === 'desert'){
+    const sg = ctx.createLinearGradient(cx - tw, cy, cx + tw, cy + th);
+    sg.addColorStop(0, lerpColor('#7a5428', '#b88848', light*0.48+0.35));
+    sg.addColorStop(1, lerpColor('#6a4420', '#a07840', light*0.45+0.38));
+    isoDiamond(cx, cy, tw, th, sg, 'rgba(90,60,25,0.3)');
+    ctx.strokeStyle = 'rgba(55,35,12,0.3)';
+    ctx.lineWidth = 1;
+    for(let i=0;i<4;i++){
+      ctx.beginPath();
+      ctx.moveTo(cx - tw*0.7, cy - th*0.15 + i*3.5);
+      ctx.quadraticCurveTo(cx, cy - th*0.45 + i*2.5 + Math.sin(r+i)*2, cx + tw*0.7, cy - th*0.1 + i*3.5);
+      ctx.stroke();
+    }
+    // cactus
+    if(hash2(r*1.3,c*0.9) > 0.7){
+      const cact = lerpColor('#1e5a28', '#3a9a40', light*0.5+0.35);
+      ctx.fillStyle = cact;
+      ctx.fillRect(cx + tw*0.15 - 2, cy - 14, 4, 14);
+      ctx.fillRect(cx + tw*0.15 - 7, cy - 8, 5, 3);
+      ctx.fillRect(cx + tw*0.15 - 7, cy - 8, 3, 6);
+    }
+  } else {
+    // rich grass with gradient + noise
+    const gg = ctx.createLinearGradient(cx, cy - th, cx, cy + th);
+    gg.addColorStop(0, lerpColor('#1e5a30', '#3a9a48', light*0.55+0.3));
+    gg.addColorStop(1, lerpColor('#143820', '#2a6a38', light*0.5+0.32));
+    isoDiamond(cx, cy, tw, th, gg, 'rgba(0,35,10,0.22)');
+    // grass tufts
+    ctx.fillStyle = lerpColor('#2a7840', '#5aba60', light*0.5);
+    for(let i=0;i<6;i++){
+      const ox = (hash2(r*3.1+i,c)-0.5)*tw*1.4;
+      const oy = (hash2(c*2.2+i,r)-0.5)*th*1.3;
+      ctx.fillRect(cx+ox-0.7, cy+oy-2, 1.4, 3 + hash2(i,r)*2);
+    }
+    // flowers occasional
+    const fl = ((r*7+c*3)|0) % 9;
+    if(fl === 0){
+      ctx.fillStyle = light>0.4 ? '#f0e060' : '#c0a030';
+      ctx.beginPath(); ctx.arc(cx+tw*0.2, cy-th*0.1, 1.6, 0, Math.PI*2); ctx.fill();
+    } else if(fl === 3){
+      ctx.fillStyle = '#e870a0';
+      ctx.beginPath(); ctx.arc(cx-tw*0.25, cy+th*0.15, 1.4, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  // owned soft border
+  if(t.owned){
+    ctx.strokeStyle = 'rgba(74,222,128,0.4)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - th);
+    ctx.lineTo(cx + tw, cy);
+    ctx.lineTo(cx, cy + th);
+    ctx.lineTo(cx - tw, cy);
+    ctx.closePath();
+    ctx.stroke();
+  }
+  if(t.pulse > 0){
+    isoDiamond(cx, cy, tw, th, `rgba(74,222,128,${t.pulse*0.28})`, null);
+  }
+}
+
+function drawIsoBuilding(r, c, light, alpha){
+  const t = grid[r][c];
+  if(!t.building) return;
+  const type = t.building.type;
+  if(['airport','statue','train'].includes(type) && !t.isAnchor) return;
+
+  const {x:cx, y:cy} = isoToScreen(r, c, 0);
+  const h = (BUILD_H[type] || 16) * (isoTW / 40);
+  const tw = isoTW * 0.72;
+  const th = isoTH * 0.72;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+
+  // soft ground shadow (offset slightly SE for light from NW)
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath();
+  ctx.ellipse(cx + isoTW*0.12, cy + th*0.35, tw*1.05, th*0.55, 0.15, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.12)';
+  ctx.beginPath();
+  ctx.ellipse(cx + isoTW*0.08, cy + th*0.25, tw*1.2, th*0.7, 0.1, 0, Math.PI*2);
+  ctx.fill();
+
+  if(isRoad(type)){
+    const hasN = inBounds(r-1,c) && grid[r-1][c].building && isRoad(grid[r-1][c].building.type);
+    const hasS = inBounds(r+1,c) && grid[r+1][c].building && isRoad(grid[r+1][c].building.type);
+    const hasW = inBounds(r,c-1) && grid[r][c-1].building && isRoad(grid[r][c-1].building.type);
+    const hasE = inBounds(r,c+1) && grid[r][c+1].building && isRoad(grid[r][c+1].building.type);
+    const isIntersection = [hasN,hasS,hasW,hasE].filter(Boolean).length >= 3;
+
+    // asphalt by tier
+    const tier = (BUILD[type] && BUILD[type].roadTier) || 1;
+    let roadCol;
+    if(tier >= 4) roadCol = lerpColor('#2a2a38','#3a3a48', light*0.3+0.4); // flyover
+    else if(tier >= 3) roadCol = lerpColor('#1c1c28','#323240', light*0.3+0.4); // highway
+    else if(tier >= 2) roadCol = lerpColor('#1a1a24','#2e2e38', light*0.3+0.4); // 2-way
+    else roadCol = lerpColor('#181820','#282830', light*0.3+0.4); // small
+    isoDiamond(cx, cy, isoTW*0.98, isoTH*0.98, roadCol, null);
+    // wider look for highway/flyover
+    if(tier >= 3){
+      ctx.strokeStyle = lerpColor('#c0a020','#f0d040', light*0.5+0.35);
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      // double yellow
+      ctx.beginPath();
+      ctx.moveTo(cx - isoTW*0.28, cy - isoTH*0.28);
+      ctx.lineTo(cx + isoTW*0.28, cy + isoTH*0.28);
+      ctx.stroke();
+    }
+    // flyover raised slab hint
+    if(tier >= 4){
+      ctx.fillStyle = 'rgba(60,60,80,0.5)';
+      ctx.beginPath();
+      ctx.moveTo(cx - isoTW*0.7, cy);
+      ctx.lineTo(cx - isoTW*0.7, cy - 6);
+      ctx.lineTo(cx, cy - isoTH*0.7 - 6);
+      ctx.lineTo(cx + isoTW*0.7, cy - 6);
+      ctx.lineTo(cx + isoTW*0.7, cy);
+      ctx.lineTo(cx, cy - isoTH*0.7);
+      ctx.closePath();
+      ctx.fill();
+      // pillars
+      ctx.fillStyle = '#4a4a58';
+      ctx.fillRect(cx - isoTW*0.4 - 2, cy - 2, 4, 8);
+      ctx.fillRect(cx + isoTW*0.25 - 2, cy - 2, 4, 8);
+    }
+
+    // sidewalks / curb bands (lighter edge)
+    const curb = lerpColor('#4a4a52','#6a6a74', light*0.35+0.4);
+    ctx.strokeStyle = curb;
+    ctx.lineWidth = Math.max(2, isoTW*0.08);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - isoTH*0.9);
+    ctx.lineTo(cx + isoTW*0.9, cy);
+    ctx.lineTo(cx, cy + isoTH*0.9);
+    ctx.lineTo(cx - isoTW*0.9, cy);
+    ctx.closePath();
+    ctx.stroke();
+
+    // center lane dashes
+    ctx.strokeStyle = lerpColor('#c0a028','#f0d040', light*0.5+0.35);
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([3, 5]);
+    if(hasN || hasS || (!hasW && !hasE)){
+      ctx.beginPath();
+      ctx.moveTo(cx - isoTW*0.32, cy - isoTH*0.32);
+      ctx.lineTo(cx + isoTW*0.32, cy + isoTH*0.32);
+      ctx.stroke();
+    }
+    if(hasW || hasE || (!hasN && !hasS)){
+      ctx.beginPath();
+      ctx.moveTo(cx + isoTW*0.32, cy - isoTH*0.32);
+      ctx.lineTo(cx - isoTW*0.32, cy + isoTH*0.32);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Zebra crosswalks at intersections
+    if(isIntersection || ((hasN||hasS) && (hasW||hasE))){
+      ctx.strokeStyle = lerpColor('#c8c8d0','#e8e8f0', light*0.4+0.45);
+      ctx.lineWidth = 1.5;
+      const stripes = 4;
+      for(let i=0;i<stripes;i++){
+        const t = (i+0.5)/stripes;
+        // along one axis
+        const ox = (t-0.5)*isoTW*0.7;
+        const oy = (t-0.5)*isoTH*0.7;
+        ctx.beginPath();
+        ctx.moveTo(cx + ox - isoTW*0.18, cy + oy - isoTH*0.08);
+        ctx.lineTo(cx + ox + isoTW*0.18, cy + oy + isoTH*0.08);
+        ctx.stroke();
+      }
+    }
+
+    // Traffic light at busy intersections
+    if(isIntersection){
+      const poleX = cx + isoTW*0.55, poleY = cy - isoTH*0.15;
+      ctx.fillStyle = '#2a2a32';
+      ctx.fillRect(poleX-1, poleY-16, 2.5, 16);
+      // light box
+      ctx.fillStyle = '#1a1a22';
+      ctx.fillRect(poleX-4, poleY-22, 8, 12);
+      // cycling lights
+      const phase = Math.floor(animTime*0.8 + r*0.3 + c*0.2) % 3;
+      const colors = ['#e03030','#e0c020','#30c040'];
+      for(let i=0;i<3;i++){
+        ctx.fillStyle = i===phase ? colors[i] : '#333';
+        ctx.beginPath();
+        ctx.arc(poleX, poleY-19+i*3.5, 1.6, 0, Math.PI*2);
+        ctx.fill();
+        if(i===phase && isNight(light)){
+          ctx.globalAlpha = 0.4;
+          ctx.beginPath();
+          ctx.arc(poleX, poleY-19+i*3.5, 4, 0, Math.PI*2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    // Manhole
+    if(hash2(r*2.1,c*1.7) > 0.82){
+      ctx.fillStyle = '#22222a';
+      ctx.beginPath(); ctx.ellipse(cx-isoTW*0.15, cy+isoTH*0.1, 3.5, 2, 0, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = '#4a4a52'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.ellipse(cx-isoTW*0.15, cy+isoTH*0.1, 2.5, 1.4, 0, 0, Math.PI*2); ctx.stroke();
+    }
+
+    ctx.restore();
+    return;
+  }
+
+  if(type === 'park' || type === 'playground'){
+    // trees as simple cones + spheres
+    const green = lerpColor('#1a5a20','#3a9a40', light*0.5+0.35);
+    const trunk = '#4a3020';
+    // tree 1
+    ctx.fillStyle = trunk;
+    ctx.fillRect(cx - tw*0.35 - 1.5, cy - 8, 3, 10);
+    ctx.fillStyle = green;
+    ctx.beginPath(); ctx.arc(cx - tw*0.35, cy - 12, 7, 0, Math.PI*2); ctx.fill();
+    // tree 2
+    ctx.fillStyle = trunk;
+    ctx.fillRect(cx + tw*0.25 - 1.5, cy - 6, 3, 8);
+    ctx.fillStyle = green;
+    ctx.beginPath(); ctx.arc(cx + tw*0.25, cy - 10, 6, 0, Math.PI*2); ctx.fill();
+    if(type === 'playground'){
+      ctx.strokeStyle = '#c04030'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 6, cy - 2); ctx.lineTo(cx - 6, cy + 6);
+      ctx.moveTo(cx + 6, cy - 2); ctx.lineTo(cx + 6, cy + 6);
+      ctx.moveTo(cx - 6, cy - 2); ctx.lineTo(cx + 6, cy - 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    return;
+  }
+
+  // Color palette by type
+  let base = '#4a5a6e';
+  if(HOUSE_TYPES.includes(type)) base = type==='apartment' ? '#3a4a5e' : type==='villa' ? '#8a7a56' : type==='hut' ? '#7a4a2c' : '#4e5e72';
+  else if(type==='factory'||type==='warehouse'||type==='oil'||type==='mine') base = '#3c3c48';
+  else if(type==='school'||type==='library'||type==='highschool'||type==='university') base = '#3a5a6a';
+  else if(type==='police') base = '#1e2e4a';
+  else if(type==='fire') base = '#5a2020';
+  else if(type==='hospital'||type==='clinic') base = '#d0d8e0';
+  else if(type==='shop'||type==='cafe'||type==='restaurant') base = '#5e3a4e';
+  else if(type==='townhall') base = '#4a4a58';
+  else if(type==='hotel') base = '#5a3a5a';
+  else if(type==='bank') base = '#5a5a40';
+  else if(type==='cinema') base = '#2c2c3c';
+  else if(type==='airport'||type==='train') base = '#3a3a44';
+  else if(type==='statue') base = '#5a5a65';
+
+  const topCol = lerpColor(base, '#ffffff', 0.25 + light*0.3);
+  const leftCol = lerpColor(base, '#0a0a10', 0.35);
+  const rightCol = lerpColor(base, '#1a1a22', 0.2);
+
+  // Multi-tile big buildings
+  if(['airport','statue','train'].includes(type)){
+    const bigTw = isoTW * 1.35;
+    const bigTh = isoTH * 1.35;
+    const bigH = h * 1.1;
+    isoBox(cx + isoTW*0.5, cy + isoTH*0.5, bigTw, bigTh, bigH, topCol, leftCol, rightCol);
+    if(type !== 'statue'){
+      isoWindows(cx + isoTW*0.5, cy + isoTH*0.5, bigTw, bigTh, bigH, light, 3, 4, 0.7);
+    } else {
+      // statue figure
+      ctx.fillStyle = '#8a8a9a';
+      ctx.fillRect(cx + isoTW*0.5 - 4, cy + isoTH*0.5 - bigH - 16, 8, 18);
+      ctx.beginPath(); ctx.arc(cx + isoTW*0.5, cy + isoTH*0.5 - bigH - 20, 6, 0, Math.PI*2); ctx.fill();
+    }
+    if(t.underConstruction){
+      const def = BUILD[type];
+      const pct = 1 - t.buildTimer / def.buildT;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(cx - 20, cy + 8, 40, 5);
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(cx - 20, cy + 8, 40 * pct, 5);
+    }
+    ctx.restore();
+    return;
+  }
+
+  // Standard building box
+  isoBox(cx, cy, tw, th, h, topCol, leftCol, rightCol);
+
+  // Windows based on height
+  const rows = Math.max(1, Math.min(6, Math.floor(h / 8)));
+  const cols = Math.max(1, Math.min(3, Math.floor(tw / 8)));
+  if(type !== 'graveyard' && type !== 'park'){
+    isoWindows(cx, cy, tw, th, h, light, rows, cols, type==='apartment'||type==='hotel'||type==='office'||type==='bank' ? 0.82 : 0.62);
+  // Roof mechanicals / antenna for tall buildings
+  if(h > 40 && (type==='apartment'||type==='office'||type==='hotel')){
+    ctx.fillStyle = lerpColor('#2a3a4a','#4a5a6a', light*0.4);
+    ctx.fillRect(cx - 4, cy - h - 6, 5, 7);
+    ctx.fillRect(cx + 3, cy - h - 4, 4, 5);
+    ctx.strokeStyle = '#6a7a8a';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx + 5, cy - h - 4);
+    ctx.lineTo(cx + 5, cy - h - 14);
+    ctx.stroke();
+    if(isNight(light)){
+      ctx.fillStyle = '#e04040';
+      ctx.beginPath(); ctx.arc(cx + 5, cy - h - 14, 1.8, 0, Math.PI*2); ctx.fill();
+    }
+  }
+  // Shop awning
+  if(type==='shop'||type==='cafe'||type==='restaurant'){
+    ctx.fillStyle = type==='cafe' ? '#e8c060' : '#c04030';
+    ctx.beginPath();
+    ctx.moveTo(cx - tw*0.85, cy - h*0.15);
+    ctx.lineTo(cx + tw*0.85, cy - h*0.15);
+    ctx.lineTo(cx + tw*0.7, cy + th*0.15 - h*0.05);
+    ctx.lineTo(cx - tw*0.7, cy + th*0.15 - h*0.05);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Hospital/clinic cross
+  if(type==='hospital'||type==='clinic'){
+    ctx.fillStyle = '#d03030';
+    const ch = Math.min(h*0.25, 10);
+    ctx.fillRect(cx - 1.5, cy - h*0.55 - ch/2, 3, ch);
+    ctx.fillRect(cx - ch/2, cy - h*0.55 - 1.5, ch, 3);
+  }
+  // Police blue light at night
+  if(type==='police' && isNight(light) && Math.sin(animTime*6) > 0){
+    ctx.fillStyle = 'rgba(60,100,255,0.5)';
+    ctx.beginPath(); ctx.arc(cx, cy - h - 2, 5, 0, Math.PI*2); ctx.fill();
+  }
+  // Fire station red light
+  if(type==='fire' && isNight(light) && Math.sin(animTime*5+1) > 0.3){
+    ctx.fillStyle = 'rgba(255,60,30,0.45)';
+    ctx.beginPath(); ctx.arc(cx, cy - h - 2, 5, 0, Math.PI*2); ctx.fill();
+  }
+  }
+
+  // Pitched roof for small houses
+  if(HOUSE_TYPES.includes(type) && type !== 'apartment'){
+    const rh = Math.max(6, h * 0.22);
+    // roof left slope
+    ctx.fillStyle = lerpColor('#4a1010','#7a2018', light*0.35+0.4);
+    ctx.beginPath();
+    ctx.moveTo(cx - tw, cy - h);
+    ctx.lineTo(cx, cy - th - h - rh);
+    ctx.lineTo(cx, cy + th - h);
+    ctx.closePath();
+    ctx.fill();
+    // roof right slope (brighter)
+    ctx.fillStyle = lerpColor('#6a1818','#a03028', light*0.4+0.42);
+    ctx.beginPath();
+    ctx.moveTo(cx + tw, cy - h);
+    ctx.lineTo(cx, cy - th - h - rh);
+    ctx.lineTo(cx, cy + th - h);
+    ctx.closePath();
+    ctx.fill();
+    // ridge line
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - th - h - rh);
+    ctx.lineTo(cx, cy + th - h);
+    ctx.stroke();
+  }
+
+  // Chimney smoke for houses / factory
+  if((HOUSE_TYPES.includes(type) || type==='factory') && Math.sin(animTime*1.3 + r + c) > 0){
+    drawSmokePuff(cx + tw*0.3, cy - h - 4, animTime + r, 0.6);
+  }
+
+  // Factory chimneys
+  if(type === 'factory' || type === 'oil'){
+    ctx.fillStyle = '#2a2a32';
+    ctx.fillRect(cx - 3, cy - h - 12, 5, 14);
+    ctx.fillRect(cx + 6, cy - h - 16, 6, 18);
+  }
+
+  // Construction bar
+  if(t.underConstruction){
+    const def = BUILD[type];
+    const pct = 1 - t.buildTimer / def.buildT;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(cx - 16, cy + th + 2, 32, 4);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(cx - 16, cy + th + 2, 32 * pct, 4);
+  }
+
+  ctx.restore();
+}
+
+function drawSmokePuff(cx,cy,t,scale=1){
+  const p = (t % 3) / 3;
+  ctx.save();
+  ctx.globalAlpha = (1-p)*0.4;
+  ctx.fillStyle = '#8a8a9a';
+  ctx.beginPath();
+  ctx.ellipse(cx + Math.sin(t*2)*3, cy - p*28*scale, 6*scale*(0.6+p), 5*scale*(0.7+p*0.6), 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+  if(Math.random() < 0.06){
+    spawnParticle(cx, cy - 2, 'smoke', {
+      vx:(Math.random()-0.5)*10, vy:-18-Math.random()*20,
+      size:3+Math.random()*4, color:'#7a7a8a', life:1.2+Math.random()*0.8, gravity:-8
+    });
+  }
+}
+
+function drawCostLabelIso(cx, cy, text, canAfford){
+  const tw = isoTW * 1.1;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(cx - tw*0.45, cy + isoTH + 2, tw*0.9, 14, 4);
+  else ctx.rect(cx - tw*0.45, cy + isoTH + 2, tw*0.9, 14);
+  ctx.fill();
+  ctx.fillStyle = canAfford ? '#fbbf24' : '#f87171';
+  ctx.font = `bold ${Math.max(9, isoTW*0.28)}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, cx, cy + isoTH + 9);
+}
+
+function draw(){
+  const phase = dayPhase(), light = lightLevel(phase);
+
+  // ===== SKY =====
+  let skyTop, skyBot, sunAlpha, moonAlpha;
+  if(light > 0.55){
+    skyTop = lerpColor('#3a7ad0', '#5a9af0', (light-0.55)/0.45);
+    skyBot = lerpColor('#8ec0f0', '#c0e0ff', (light-0.55)/0.45);
+    sunAlpha = 0.85; moonAlpha = 0;
+  } else if(light > 0.28){
+    const t = (light - 0.28) / 0.27;
+    skyTop = lerpColor('#1a1838', '#3a7ad0', t);
+    skyBot = lerpColor('#e07030', '#8ec0f0', t);
+    sunAlpha = 0.4 + t*0.4; moonAlpha = (1-t)*0.5;
+  } else {
+    skyTop = lerpColor('#010208', '#060c1c', light/0.28);
+    skyBot = lerpColor('#060c18', '#121e38', light/0.28);
+    sunAlpha = 0; moonAlpha = 0.75 + (0.28-light)*0.6;
+  }
+  const grd = ctx.createLinearGradient(0,0,0,H);
+  grd.addColorStop(0, skyTop);
+  grd.addColorStop(0.6, lerpColor(skyTop, skyBot, 0.5));
+  grd.addColorStop(1, skyBot);
+  ctx.fillStyle = grd;
+  ctx.fillRect(0,0,W,H);
+
+  // Stars
+  if(moonAlpha > 0.1){
+    for(let i=0;i<50;i++){
+      const sx = (i*97+31) % W;
+      const sy = (i*53+17) % (H*0.45);
+      const tw = 0.4 + 0.6*Math.abs(Math.sin(animTime*(1.1+i*0.05)+i));
+      ctx.fillStyle = `rgba(220,230,255,${(0.3+moonAlpha*0.5)*tw})`;
+      ctx.beginPath(); ctx.arc(sx, sy, (i%4===0)?1.8:1, 0, Math.PI*2); ctx.fill();
+    }
+    // Moon
+    const mx = W*0.78, my = H*0.1, mr = Math.min(W,H)*0.04;
+    const mg = ctx.createRadialGradient(mx,my,0,mx,my,mr*2.5);
+    mg.addColorStop(0, `rgba(200,210,255,${moonAlpha*0.3})`);
+    mg.addColorStop(1, 'rgba(180,190,255,0)');
+    ctx.fillStyle = mg;
+    ctx.beginPath(); ctx.arc(mx,my,mr*2.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = `rgba(235,240,255,${moonAlpha})`;
+    ctx.beginPath(); ctx.arc(mx,my,mr,0,Math.PI*2); ctx.fill();
+  }
+
+  // Sun
+  if(sunAlpha > 0.05){
+    const sunX = W*(0.2 + phase*0.55);
+    const sunY = H*(0.08 + Math.abs(phase-0.5)*0.25);
+    const sunR = Math.min(W,H)*0.045;
+    const sg = ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR*3);
+    sg.addColorStop(0, `rgba(255,230,120,${sunAlpha*0.5})`);
+    sg.addColorStop(1, 'rgba(255,140,30,0)');
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(sunX,sunY,sunR*3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff8d0';
+    ctx.globalAlpha = sunAlpha;
+    ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Weather darken
+  if(weather === 'cloudy' || weather === 'rain' || weather === 'storm'){
+    const dark = weather==='storm'?0.35:(weather==='rain'?0.2:0.1);
+    ctx.fillStyle = `rgba(30,40,60,${dark})`;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  // ===== DRAW TILES IN DEPTH ORDER (back to front) =====
+  // Sort by (r+c) then r for correct isometric occlusion
+  const order = [];
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++) order.push([r,c]);
+  order.sort((a,b)=> (a[0]+a[1]) - (b[0]+b[1]) || a[0]-b[0]);
+
+  // Ground pass
+  for(const [r,c] of order){
+    drawIsoTileGround(r, c, light);
+  }
+
+  // Hover highlight
+  if(hoverR >= 0 && hoverC >= 0 && inBounds(hoverR, hoverC)){
+    const {x:cx, y:cy} = isoToScreen(hoverR, hoverC, 0);
+    const isBig = ['airport','statue','train'].includes(tool);
+    ctx.strokeStyle = 'rgba(56,189,248,0.9)';
+    ctx.lineWidth = 2.5;
+    ctx.fillStyle = 'rgba(56,189,248,0.2)';
+    if(isBig){
+      // 2x2 footprint approx
+      const {x:cx2, y:cy2} = isoToScreen(hoverR+0.5, hoverC+0.5, 0);
+      isoDiamond(cx2, cy2, isoTW*1.6, isoTH*1.6, 'rgba(56,189,248,0.18)', 'rgba(56,189,248,0.85)');
+    } else {
+      isoDiamond(cx, cy, isoTW*0.98, isoTH*0.98, 'rgba(56,189,248,0.22)', 'rgba(56,189,248,0.9)');
+    }
+  }
+
+  // Buildings pass (same order)
+  for(const [r,c] of order){
+    const t = grid[r][c];
+    if(!t.building) continue;
+    const alpha = t.underConstruction ? 0.5 : 1;
+    drawIsoBuilding(r, c, light, alpha);
+  }
+
+  // Cost labels
+  if(tool === 'buy'){
+    for(const [r,c] of order){
+      if(!grid[r][c].owned && isBuyable(r,c)){
+        const {x:cx, y:cy} = isoToScreen(r,c,0);
+        drawCostLabelIso(cx, cy, '$'+landCost(r,c), cash >= landCost(r,c));
+      }
+    }
+  } else if(tool && tool !== 'bulldoze' && !['airport','statue','train'].includes(tool)){
+    const def = BUILD[tool];
+    if(def){
+      for(const [r,c] of order){
+        const t = grid[r][c];
+        if(t.owned && !t.building && t.type !== 'river'){
+          let ok = true;
+          if(def.terrain === 'desert' && t.type !== 'desert') ok = false;
+          if(def.terrain === 'mountain' && t.type !== 'mountain') ok = false;
+          if(def.terrain !== 'mountain' && t.type === 'mountain') ok = false;
+          if(ok){
+            const {x:cx, y:cy} = isoToScreen(r,c,0);
+            drawCostLabelIso(cx, cy, '$'+def.cost, cash >= def.cost);
+          }
+        }
+      }
+    }
+  }
+
+  // Street lamps — strong pools like reference (day+night, brighter at night)
+  for(const [r,c] of order){
+    const t = grid[r][c];
+    if(!(t.building && isRoad(t.building.type) && !t.underConstruction)) continue;
+    if(hash2(r*1.7, c*2.3) > 0.5) continue;
+    const {x:lx, y:ly} = isoToScreen(r, c, 0);
+    const lampX = lx + isoTW*0.35, lampY = ly - isoTH*0.05;
+    // pole
+    ctx.strokeStyle = '#3a3a48';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lampX, lampY);
+    ctx.lineTo(lampX, lampY - 18);
+    ctx.stroke();
+    // arm
+    ctx.beginPath();
+    ctx.moveTo(lampX, lampY - 17);
+    ctx.lineTo(lampX - 5, lampY - 15);
+    ctx.stroke();
+    // glow pool on ground
+    const glowR = isNight(light) ? 22 : 10;
+    const glowA = isNight(light) ? 0.42 : 0.08;
+    const lg = ctx.createRadialGradient(lampX-3, lampY+2, 0, lampX-3, lampY+2, glowR);
+    lg.addColorStop(0, `rgba(255,220,140,${glowA})`);
+    lg.addColorStop(0.45, `rgba(255,190,100,${glowA*0.35})`);
+    lg.addColorStop(1, 'rgba(255,180,60,0)');
+    ctx.fillStyle = lg;
+    ctx.beginPath(); ctx.arc(lampX-3, lampY+2, glowR, 0, Math.PI*2); ctx.fill();
+    // bulb
+    ctx.fillStyle = isNight(light) ? '#fff4c0' : '#d0d0a0';
+    ctx.beginPath(); ctx.arc(lampX-5, lampY-15, 2.8, 0, Math.PI*2); ctx.fill();
+    if(isNight(light)){
+      ctx.globalAlpha = 0.5;
+      ctx.beginPath(); ctx.arc(lampX-5, lampY-15, 5, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Cars (isometric, detailed)
+  for(const car of cars){
+    const pr = car.r + car.dr * car.progress;
+    const pc = car.c + car.dc * car.progress;
+    const {x:px, y:py} = isoToScreen(pr, pc, 3);
+    ctx.save();
+    ctx.translate(px, py);
+    // orient roughly by direction
+    const ang = car.dr === 1 ? 0.4 : car.dr === -1 ? -2.7 : car.dc === 1 ? -0.4 : 2.7;
+    ctx.rotate(ang * 0.15);
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(2, 4, 7, 3.2, 0.2, 0, Math.PI*2); ctx.fill();
+    // body
+    ctx.fillStyle = car.color;
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(-7, -3.5, 14, 7, 2);
+    else ctx.rect(-7, -3.5, 14, 7);
+    ctx.fill();
+    // roof
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.fillRect(-4, -2.5, 7, 5);
+    // windshield
+    ctx.fillStyle = 'rgba(160,210,240,0.75)';
+    ctx.fillRect(-1, -2.2, 5, 4.4);
+    // headlights
+    ctx.fillStyle = isNight(light) ? '#fff8c0' : '#fef08a';
+    ctx.fillRect(5.5, -2.5, 2.5, 2);
+    ctx.fillRect(5.5, 0.5, 2.5, 2);
+    if(isNight(light)){
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = '#ffe8a0';
+      ctx.beginPath(); ctx.ellipse(10, 0, 8, 4, 0, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    // tail
+    ctx.fillStyle = '#e03030';
+    ctx.fillRect(-7, -2, 2, 1.5);
+    ctx.fillRect(-7, 0.5, 2, 1.5);
+    ctx.restore();
+  }
+
+  // Cats
+  for(const cat of cats){
+    const pr = cat.r + cat.dr * cat.progress;
+    const pc = cat.c + cat.dc * cat.progress;
+    const {x:px, y:py} = isoToScreen(pr, pc, 1);
+    ctx.save();
+    ctx.translate(px, py);
+    if(cat.dc < 0) ctx.scale(-1,1);
+    ctx.fillStyle = cat.color;
+    ctx.fillRect(-4, -2, 8, 4);
+    ctx.fillRect(2, -5, 4, 4);
+    ctx.beginPath(); ctx.moveTo(2,-5); ctx.lineTo(3,-7.5); ctx.lineTo(4.5,-5); ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(3.5, -3.5, 1, 1);
+    ctx.restore();
+  }
+
+  // Pedestrians
+  for(const p of pedestrians){
+    const pr = p.r + p.dr * p.progress;
+    const pc = p.c + p.dc * p.progress;
+    const {x:px, y:py} = isoToScreen(pr, pc, 2);
+    ctx.save();
+    ctx.translate(px, py);
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.ellipse(0, 3, 3.5, 1.5, 0, 0, Math.PI*2); ctx.fill();
+    // legs
+    ctx.fillStyle = '#2a2a40';
+    ctx.fillRect(-2, 0, 1.5, 4);
+    ctx.fillRect(0.5, 0, 1.5, 4);
+    // body
+    ctx.fillStyle = p.shirt;
+    ctx.fillRect(-2.5, -5, 5, 6);
+    // head
+    ctx.fillStyle = p.skin;
+    ctx.beginPath(); ctx.arc(0, -7, 2.4, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+
+  // Night atmosphere — deep blue + warm city glow (master)
+  if(light < 0.48){
+    const d = (0.48 - light) * 1.6 * 0.42;
+    ctx.fillStyle = `rgba(2,5,16,${d})`;
+    ctx.fillRect(0,0,W,H);
+    if(light < 0.35){
+      const strength = (0.35 - light) * 0.65;
+      // warm core from densest buildings area (map center)
+      const mid = isoToScreen((GRID-1)/2, (GRID-1)/2, 0);
+      const cg = ctx.createRadialGradient(mid.x, mid.y, 0, mid.x, mid.y, W*0.5);
+      cg.addColorStop(0, `rgba(255,170,70,${strength*0.28})`);
+      cg.addColorStop(0.35, `rgba(255,120,40,${strength*0.12})`);
+      cg.addColorStop(0.65, `rgba(60,100,180,${strength*0.07})`);
+      cg.addColorStop(1, 'rgba(15,25,50,0)');
+      ctx.fillStyle = cg;
+      ctx.fillRect(0,0,W,H);
+      // subtle vignette
+      const vg = ctx.createRadialGradient(W/2, H/2, W*0.25, W/2, H/2, W*0.75);
+      vg.addColorStop(0, 'rgba(0,0,0,0)');
+      vg.addColorStop(1, `rgba(0,0,8,${strength*0.35})`);
+      ctx.fillStyle = vg;
+      ctx.fillRect(0,0,W,H);
+    }
+  }
+
+  // Particles
+  drawParticles(ctx);
+
+  // Floaters
+  for(const f of floaters){
+    const a = 1 - f.t/f.life;
+    const {x:fx, y:fy} = isoToScreen(f.r, f.c, 20);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = f.color;
+    ctx.font = `bold ${Math.max(11, isoTW*0.35)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(f.text, fx, fy - f.t*18);
+  }
+  ctx.globalAlpha = 1;
+
+  // Rain
+  if((weather === 'rain' || weather === 'storm') && rainDrops.length){
+    ctx.strokeStyle = weather==='storm' ? 'rgba(180,200,255,0.5)' : 'rgba(160,190,255,0.35)';
+    ctx.lineWidth = weather==='storm' ? 1.4 : 1;
+    for(const d of rainDrops){
+      ctx.beginPath();
+      ctx.moveTo(d.x, d.y);
+      ctx.lineTo(d.x - (weather==='storm'?3:1.5), d.y + d.len);
+      ctx.stroke();
+    }
+  }
+}
+
+function loop(ts){
+  if(!lastT) lastT=ts;
+  let dt=(ts-lastT)/1000; lastT=ts; dt=Math.min(dt,0.05);
+  if(running&&!paused) update(dt);
+  draw();
+  
+// Unlock audio on first user gesture (browser policy)
+function unlockAudioOnce(){
+  initMusic();
+  if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+  document.removeEventListener('pointerdown', unlockAudioOnce);
+  document.removeEventListener('keydown', unlockAudioOnce);
+}
+document.addEventListener('pointerdown', unlockAudioOnce);
+document.addEventListener('keydown', unlockAudioOnce);
+
+requestAnimationFrame(loop);
+}
+
+// ===================== OVERLAYS =====================
+const startOverlay=document.getElementById('startOverlay');
+const howtoOverlay=document.getElementById('howtoOverlay');
+const pauseOverlay=document.getElementById('pauseOverlay');
+const winOverlay=document.getElementById('winOverlay');
+let howtoReturnsTo='start';
+
+function startGame(){
+  resetGame(); resize(); buildToolbar(); closeSheet();
+  document.getElementById('profileOverlay').style.display='none';
+  startOverlay.style.display='none';
+  pauseOverlay.style.display='none';
+  winOverlay.style.display='none';
+  updateClockUI();
+  updateMissionList();
+  renderReviews();
+  updateHappinessUI();
+  const spName=document.getElementById('spName');
+  if(spName) spName.textContent = playerName || 'Player';
+  showToast('Welcome, ' + playerName + '!');
+}
+
+document.getElementById('createProfileBtn').addEventListener('click', ()=>{
+  const input = document.getElementById('nameInput');
+  const name = (input && input.value.trim()) ? input.value.trim().substring(0,16) : '';
+  if(!name){ showToast('Please enter your name'); return; }
+  playerName = name;
+  try { localStorage.setItem('fpl_playerName', playerName); } catch(e){}
+  document.getElementById('profileOverlay').style.display='none';
+  startOverlay.style.display='flex';
+  const sub = document.getElementById('startWelcome') || startOverlay.querySelector('.sub');
+  if(sub) sub.innerHTML = 'Welcome, <b>'+playerName+'</b>!<br>Build from a Village to Power Land.<br>Complete missions and unlock advanced buildings.';
+});
+
+document.getElementById('playBtn').addEventListener('click',()=>{ startGame(); startMusic(); });
+document.getElementById('howtoBtnStart').addEventListener('click',()=>{ howtoReturnsTo='start'; startOverlay.style.display='none'; howtoOverlay.style.display='flex'; });
+document.getElementById('howtoBtnPause').addEventListener('click',()=>{ howtoReturnsTo='pause'; pauseOverlay.style.display='none'; howtoOverlay.style.display='flex'; });
+document.getElementById('howtoCloseBtn').addEventListener('click',()=>{
+  howtoOverlay.style.display='none';
+  if(howtoReturnsTo==='start') startOverlay.style.display='flex'; else pauseOverlay.style.display='flex';
+});
+document.getElementById('musicBtn').addEventListener('click', () => toggleMusic());
+document.getElementById('pauseBtn').addEventListener('click',()=>{ if(!running) return; paused=true; closeSheet(); pauseOverlay.style.display='flex'; stopMusic(); });
+document.getElementById('resumeBtn').addEventListener('click',()=>{ paused=false; pauseOverlay.style.display='none'; startMusic(); });
+document.getElementById('restartBtn').addEventListener('click',()=>{ pauseOverlay.style.display='none'; startGame(); });
+document.getElementById('quitBtn').addEventListener('click',()=>{ running=false; paused=false; pauseOverlay.style.display='none'; startOverlay.style.display='flex'; });
+document.getElementById('winContinue').addEventListener('click',()=>{ winOverlay.style.display='none'; });
+document.getElementById('winNew').addEventListener('click',()=>{ winOverlay.style.display='none'; startGame(); });
+
+// Allow Enter key on name input
+document.getElementById('nameInput').addEventListener('keydown', e=>{
+  if(e.key==='Enter') document.getElementById('createProfileBtn').click();
+});
+
+// Init — no loading screen, straight to profile or start
+resetGame(); running=false; resize(); buildToolbar(); draw(); updateClockUI();
+
+const profileEl = document.getElementById('profileOverlay');
+const savedName = localStorage.getItem('fpl_playerName');
+if(savedName && savedName.trim()){
+  playerName = savedName.trim().substring(0,16);
+  profileEl.style.display = 'none';
+  startOverlay.style.display = 'flex';
+  const sub = document.getElementById('startWelcome');
+  if(sub) sub.innerHTML = 'Welcome back, <b>'+playerName+'</b>!<br>Build from Village to Power Land.<br>Complete missions and unlock advanced buildings.';
+} else {
+  profileEl.style.display = 'flex';
+  startOverlay.style.display = 'none';
+  setTimeout(()=>{ try{ document.getElementById('nameInput').focus(); }catch(e){} }, 200);
+}
+
+
+// Unlock audio on first user gesture (browser policy)
+function unlockAudioOnce(){
+  initMusic();
+  if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+  document.removeEventListener('pointerdown', unlockAudioOnce);
+  document.removeEventListener('keydown', unlockAudioOnce);
+}
+document.addEventListener('pointerdown', unlockAudioOnce);
+document.addEventListener('keydown', unlockAudioOnce);
+
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
